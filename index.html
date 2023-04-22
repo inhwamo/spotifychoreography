@@ -6,38 +6,15 @@
     <title>Spotify API Example</title>
 </head>
 <body>
-    <input type="text" id="songNameInput" placeholder="Enter song name...">
-    <button id="searchButton">Search</button>
-    <div id="songDetails"></div>
     <form id="song-search-form">
         <label for="song-name">Song name:</label>
         <input type="text" id="song-name" name="song-name" required>
         <button type="submit">Search</button>
     </form>
+    <div id="song-info"></div>
 
     <script>
-        const searchButton = document.getElementById('searchButton');
-        const songNameInput = document.getElementById('songNameInput');
-        const songDetails = document.getElementById('songDetails');
-
-        searchButton.addEventListener('click', async () => {
-            const songName = songNameInput.value;
-            if (songName) {
-                const access_token = await getAccessToken();
-                const track = await searchSong(access_token, songName);
-                if (track) {
-                    const details = getSongDetails(track);
-                    songDetails.innerHTML = `
-                        <p>Song Name: ${details.songName}</p>
-                        <p>Artist Name: ${details.artistName}</p>
-                        <p>Release Date: ${details.releaseDate}</p>
-                    `;
-                } else {
-                    songDetails.innerHTML = '<p>No results found for the given song name.</p>';
-                }
-            }
-        });
-                // Add an event listener for form submission
+        // Add an event listener for form submission
         const form = document.getElementById('song-search-form');
         form.addEventListener('submit', async (event) => {
             event.preventDefault(); // Prevent the default form submission behavior
@@ -52,22 +29,23 @@
             return data.access_token;
         }
 
-        async function searchSong(, songName) {
-            //START OF NEW CODE
+        async function searchSong(songName) {
+            const accessToken = await getAccessToken();
+
             // Search for the song
             const searchResponse = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(songName)}&type=track&limit=1`, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
             });
             const searchData = await searchResponse.json();
             const track = searchData.tracks.items[0];
 
             // Fetch the album to get the genres
             const albumResponse = await fetch(track.album.href, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
             });
             const albumData = await albumResponse.json();
 
@@ -76,19 +54,11 @@
             const genres = albumData.genres;
 
             // Update the HTML content
-            const songInfoElement = document.getElementById('songDetails');
+            const songInfoElement = document.getElementById('song-info');
             songInfoElement.innerHTML = `
-            <p>Artist: ${artistName}</p>
-            <p>Genres: ${genres.join(', ') || 'N/A'}</p>
+                <p>Artist: ${artistName}</p>
+                <p>Genres: ${genres.join(', ') || 'N/A'}</p>
             `;
-        }
-
-        function getSongDetails(track) {
-            return {
-                songName: track.name,
-                artistName: track.artists[0].name,
-                releaseDate: track.album.release_date
-            };
         }
     </script>
 </body>
