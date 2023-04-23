@@ -1,15 +1,7 @@
-
 import json
 import os
 import requests
 def lambda_handler(event, context):
-    allowed_origins = ['https://www.inhwamo.com', 'https://inhwamo.com', 'https://www.inhwamo.com/spotifychoreography']
-    origin = event.get('headers', {}).get('origin', '')
-
-    if origin in allowed_origins:
-        access_control_allow_origin = origin
-    else:
-        access_control_allow_origin = ''
 
     response = {
         'statusCode': 400,
@@ -17,7 +9,7 @@ def lambda_handler(event, context):
             'error': 'Invalid request'
         }),
         'headers': {
-            'Access-Control-Allow-Origin': access_control_allow_origin,
+            'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type,Authorization',
         }
@@ -47,7 +39,7 @@ def lambda_handler(event, context):
                     'access_token': access_token
                 }),
                 'headers': {
-                    'Access-Control-Allow-Origin': access_control_allow_origin,
+                    'Access-Control-Allow-Origin': '*',
                     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
                     'Access-Control-Allow-Headers': 'Content-Type,Authorization',
                 }
@@ -59,10 +51,22 @@ def lambda_handler(event, context):
                     'error': str(e)
                 }),
                 'headers': {
-                    'Access-Control-Allow-Origin': access_control_allow_origin,
+                    'Access-Control-Allow-Origin': '*',
                     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
                     'Access-Control-Allow-Headers': 'Content-Type,Authorization',
                 }
             }
+
+    if event['httpMethod'] == 'OPTIONS':
+        # Preflight request. Reply successfully:
+        response = {
+            'statusCode': 200,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+                'Access-Control-Max-Age': '3600',
+            }
+        }
 
     return response

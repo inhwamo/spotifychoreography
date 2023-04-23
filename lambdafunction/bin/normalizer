@@ -1,4 +1,4 @@
-#!/Users/inhwamo/Documents/lambdafunction/venv/bin/python
+#!/Users/inhwamo/Documents/spotifychoreography/lambdafunction/venv/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys
