@@ -4,6 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spotify API Example</title>
+    <style>
+        .album-art {
+            width: 300px;
+            height: 300px;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .searching {
+            display: none;
+        }
+    </style>
 </head>
 <body>
     <form id="song-search-form">
@@ -16,10 +30,26 @@
     <script>
         // Add an event listener for form submission
         const form = document.getElementById('song-search-form');
+        const albumArtContainer = document.getElementById('albumArtContainer');
+        const searchingText = document.getElementById('searchingText');
+        const songInfoElement = document.getElementById('song-info');
+
+
         form.addEventListener('submit', async (event) => {
-            event.preventDefault(); // Prevent the default form submission behavior
+            event.preventDefault();
             const songName = document.getElementById('song-name').value;
+
+            // Show searching text and disable the button
+            searchingText.style.display = 'block';
+            form.querySelector('button').disabled = true;
+
             await searchSong(songName);
+
+            // Hide searching text and enable the button after a delay
+            searchingText.style.display = 'none';
+            setTimeout(() => {
+                form.querySelector('button').disabled = false;
+            }, 5000);
         });
 
         async function getAccessToken() {
@@ -70,13 +100,20 @@
             // Get the artist name and genres
             const artistName = track.artists[0].name;
             const genres = albumData.genres;
-
+            const imageUrl = track.album.images[0].url;
+            const albumName = track.album.name;
+            const trackName = track.name;
+            const releaseDate = track.album.release_date;
             // Update the HTML content
             console.log('Updating HTML content...');
+            albumArtContainer.innerHTML = `<img src="${imageUrl}" alt="Album Art">`;
 
-            const songInfoElement = document.getElementById('song-info');
+            // const songInfoElement = document.getElementById('song-info');
             songInfoElement.innerHTML = `
                 <p>Artist: ${artistName}</p>
+                <p>Album: ${albumName}</p>
+                <p>Track: ${trackName}</p>
+                <p>Release Date: ${releaseDate}</p>
                 <p>Genres: ${genres.join(', ') || 'N/A'}</p>
             `;
             console.log('HTML content updated');
