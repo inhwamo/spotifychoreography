@@ -94,7 +94,7 @@ async function searchSong(songName) {
     albumArtContainer.innerHTML = `<img src="${imageUrl}" alt="Album Art", style="width: 300px; height: 300px;">`;
 
     try {
-        const lyrics = await searchLyrics(artistName, trackName);
+        const lyrics = await fetchLyrics(artistName, trackName);
         console.log("Lyrics:", lyrics);
         songInfoElement.innerHTML += `<div class="lyrics-container"><pre>${lyrics}</pre></div>`;
       } catch (error) {
@@ -112,7 +112,7 @@ async function searchSong(songName) {
     console.log('HTML content updated');
 
 }
-async function searchLyrics(artist, title) {
+async function fetchLyrics(artist, title) {
     const accessToken = "ZRq5TE0jeu-lC2jdTBA40Bk7Jm_pNglRrhS0n5_pWGw-QWfnjH02D3lvdD2zJIc2";
     const searchQuery = `${title} ${artist}`;
     const response = await fetch(
@@ -125,19 +125,24 @@ async function searchLyrics(artist, title) {
     let lyricsUrl;
 
     if (data.response.hits.length > 0) {
-      lyricsUrl = data.response.hits[0].result.url;
-    } else {
-      throw new Error("No lyrics found");
-    }
-
-    const lyricsResponse = await fetch(lyricsUrl);
-    const lyricsHtml = await lyricsResponse.text();
-  
-    // Extract the lyrics from the HTML
-    const parser = new DOMParser();
-    const lyricsDoc = parser.parseFromString(lyricsHtml, 'text/html');
-    const lyricsElement = lyricsDoc.querySelector('.lyrics');
-    const lyrics = lyricsElement ? lyricsElement.textContent.trim() : 'Lyrics not found';
+        lyricsUrl = data.response.hits[0].result.url;
+      } else {
+        throw new Error("No lyrics found");
+      }
     
-    return lyrics;
-}
+      // Replace the following line with your API Gateway URL
+      const apiGatewayUrl = "https://nxxfbjjkth.execute-api.ca-central-1.amazonaws.com/prod";
+    
+      const lyricsResponse = await fetch(apiGatewayUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ url: lyricsUrl })
+      });
+    
+      const lyricsData = await lyricsResponse.json();
+      const lyrics = lyricsData.lyrics || 'Lyrics not found';
+    
+      return lyrics;
+    }
