@@ -112,31 +112,30 @@ async function searchSong(songName) {
     console.log('HTML content updated');
 
 }
-const cheerio = require('cheerio');
-
 async function searchLyrics(artist, title) {
     const accessToken = "ZRq5TE0jeu-lC2jdTBA40Bk7Jm_pNglRrhS0n5_pWGw-QWfnjH02D3lvdD2zJIc2";
     const searchQuery = `${title} ${artist}`;
     const response = await fetch(
-      `https://api.genius.com/search?q=${encodeURIComponent(
-        searchQuery
-      )}&access_token=${accessToken}`
+        `https://api.genius.com/search?q=${encodeURIComponent(
+            searchQuery
+        )}&access_token=${accessToken}`
     );
     const data = await response.json();
-  
+
     if (data.response.hits.length > 0) {
-      const lyricsUrl = data.response.hits[0].result.url;
+        const lyricsUrl = data.response.hits[0].result.url;
     } else {
-      throw new Error("No lyrics found");
+        throw new Error("No lyrics found");
     }
 
     const lyricsResponse = await fetch(lyricsUrl);
     const lyricsHtml = await lyricsResponse.text();
-  
+
     // Extract the lyrics from the HTML
-    const $ = cheerio.load(lyricsHtml);
-    const lyrics = $('.lyrics').text().trim();
-  
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(lyricsHtml, 'text/html');
+    const lyricsElement = doc.querySelector('.lyrics');
+    const lyrics = lyricsElement ? lyricsElement.textContent.trim() : 'No lyrics found';
+
     return lyrics;
-  }
-  
+}
