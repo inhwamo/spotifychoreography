@@ -1,9 +1,9 @@
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('song-search-form');
-    const albumArtContainer = document.getElementById('albumArtContainer');
-    const searchingText = document.getElementById('searchingText');
-    const songInfoElement = document.getElementById('song-info');
+const form = document.getElementById('song-search-form');
+const albumArtContainer = document.getElementById('albumArtContainer');
+const searchingText = document.getElementById('searchingText');
+const songInfoElement = document.getElementById('song-info');
 
+document.addEventListener('DOMContentLoaded', function() {
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
         const songName = document.getElementById('song-name').value;
