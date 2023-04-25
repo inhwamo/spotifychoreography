@@ -113,36 +113,18 @@ async function searchSong(songName) {
 
 }
 async function fetchLyrics(artist, title) {
-    const accessToken = "ZRq5TE0jeu-lC2jdTBA40Bk7Jm_pNglRrhS0n5_pWGw-QWfnjH02D3lvdD2zJIc2";
-    const searchQuery = `${title} ${artist}`;
-    const response = await fetch(
-      `https://api.genius.com/search?q=${encodeURIComponent(
-        searchQuery
-      )}&access_token=${accessToken}`
-    );
-    const data = await response.json();
+    const apiGatewayUrl = "https://nxxfbjjkth.execute-api.ca-central-1.amazonaws.com/prod";
   
-    let lyricsUrl;
-
-    if (data.response.hits.length > 0) {
-        lyricsUrl = data.response.hits[0].result.url;
-      } else {
-        throw new Error("No lyrics found");
-      }
-    
-      // Replace the following line with your API Gateway URL
-      const apiGatewayUrl = "https://nxxfbjjkth.execute-api.ca-central-1.amazonaws.com/prod";
-    
-      const lyricsResponse = await fetch(apiGatewayUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ url: lyricsUrl })
-      });
-    
-      const lyricsData = await lyricsResponse.json();
-      const lyrics = lyricsData.lyrics || 'Lyrics not found';
-    
-      return lyrics;
-    }
+    const lyricsResponse = await fetch(apiGatewayUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ artist, title })
+    });
+  
+    const lyricsData = await lyricsResponse.json();
+    const lyrics = lyricsData.lyrics || 'Lyrics not found';
+  
+    return lyrics;
+  }
