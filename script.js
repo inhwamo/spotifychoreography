@@ -3,6 +3,7 @@ const albumArtContainer = document.getElementById('albumArtContainer');
 const searchingText = document.getElementById('searchingText');
 const songInfoElement = document.getElementById('song-info');
 
+
 document.addEventListener('DOMContentLoaded', function() {
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -32,6 +33,7 @@ async function getAccessToken() {
         return storedToken;
     }
 
+    // Either no token or expired token, need to fetch a new one
     console.log('Getting a new access token...');
     const response = await fetch('https://d2k708hnw9.execute-api.ca-central-1.amazonaws.com/prod/accesstoken', {
         method: 'GET',
@@ -91,6 +93,15 @@ async function searchSong(songName) {
     console.log('Updating HTML content...');
     albumArtContainer.innerHTML = `<img src="${imageUrl}" alt="Album Art", style="width: 300px; height: 300px;">`;
 
+    try {
+        const lyrics = await searchLyrics(artistName, trackName);
+        console.log("Lyrics:", lyrics);
+        songInfoElement.innerHTML += `<div class="lyrics-container"><pre>${lyrics}</pre></div>`;
+      } catch (error) {
+        console.error("Error fetching lyrics:", error.message);
+      }
+    
+
     songInfoElement.innerHTML = `
         <p>Artist: ${artistName}</p>
         <p>Album: ${albumName}</p>
@@ -101,3 +112,31 @@ async function searchSong(songName) {
     console.log('HTML content updated');
 
 }
+const cheerio = require('cheerio');
+
+async function searchLyrics(artist, title) {
+    const accessToken = "ZRq5TE0jeu-lC2jdTBA40Bk7Jm_pNglRrhS0n5_pWGw-QWfnjH02D3lvdD2zJIc2";
+    const searchQuery = `${title} ${artist}`;
+    const response = await fetch(
+      `https://api.genius.com/search?q=${encodeURIComponent(
+        searchQuery
+      )}&access_token=${accessToken}`
+    );
+    const data = await response.json();
+  
+    if (data.response.hits.length > 0) {
+      const lyricsUrl = data.response.hits[0].result.url;
+    } else {
+      throw new Error("No lyrics found");
+    }
+
+    const lyricsResponse = await fetch(lyricsUrl);
+    const lyricsHtml = await lyricsResponse.text();
+  
+    // Extract the lyrics from the HTML
+    const $ = cheerio.load(lyricsHtml);
+    const lyrics = $('.lyrics').text().trim();
+  
+    return lyrics;
+  }
+  
