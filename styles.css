@@ -1,0 +1,13 @@
+.album-art {
+    width: 300px;
+    height: 300px;
+    background-color: #f0f0f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.searching {
+    display: none;
+}
