@@ -25,16 +25,14 @@
         <input type="text" id="song-name" name="song-name" required>
         <button type="submit" >Search</button>
     </form>
+    <div class="album-art" id="albumArtContainer">
+        <p class="searching" id="searchingText">Searching...</p>
+    </div>
+    
     <div id="song-info"></div>
 
     <script>
         // Add an event listener for form submission
-        const form = document.getElementById('song-search-form');
-        const albumArtContainer = document.getElementById('albumArtContainer');
-        const searchingText = document.getElementById('searchingText');
-        const songInfoElement = document.getElementById('song-info');
-
-
         document.addEventListener('DOMContentLoaded', function() {
             const form = document.getElementById('song-search-form');
             const albumArtContainer = document.getElementById('albumArtContainer');
@@ -49,7 +47,7 @@
                 searchingText.style.display = 'block';
                 form.querySelector('button').disabled = true;
 
-                await searchSong(songName);
+            await searchSong(songName);
 
                 // Hide searching text and enable the button after a delay
                 searchingText.style.display = 'none';
