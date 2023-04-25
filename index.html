@@ -75,6 +75,7 @@
 
 
         async function searchSong(songName) {
+            const songInfoElement = document.getElementById('song-info');
             console.log('Searching for the song...');
             const accessToken = await getAccessToken();
 
@@ -110,9 +111,8 @@
             const releaseDate = track.album.release_date;
             // Update the HTML content
             console.log('Updating HTML content...');
-            albumArtContainer.innerHTML = `<img src="${imageUrl}" alt="Album Art">`;
+            albumArtContainer.innerHTML = `<img src="${imageUrl}" alt="Album Art", style="width: 300px; height: 300px;">`;
 
-            // const songInfoElement = document.getElementById('song-info');
             songInfoElement.innerHTML = `
                 <p>Artist: ${artistName}</p>
                 <p>Album: ${albumName}</p>
