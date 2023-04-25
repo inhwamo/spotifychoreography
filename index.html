@@ -57,7 +57,17 @@
             });
         });
         async function getAccessToken() {
-            console.log('Getting access token...');
+            const now = new Date().getTime();
+            const storedToken = localStorage.getItem('accessToken');
+            const storedExpiration = localStorage.getItem('tokenExpiration');
+
+            // Check if the token is stored and still valid
+            if (storedToken && storedExpiration && now < parseInt(storedExpiration)) {
+                console.log('Using stored access token:', storedToken);
+                return storedToken;
+            }
+
+            console.log('Getting a new access token...');
             const response = await fetch('https://d2k708hnw9.execute-api.ca-central-1.amazonaws.com/prod/accesstoken', {
                 method: 'GET',
                 headers: {
@@ -67,6 +77,9 @@
             const data = await response.json();
             if (data.access_token) {
                 console.log('Access token:', data.access_token);
+                const expiration = now + 3600 * 1000; // Current time + 1 hour in milliseconds
+                localStorage.setItem('accessToken', data.access_token);
+                localStorage.setItem('tokenExpiration', expiration);
                 return data.access_token;
             } else {
                 throw new Error('Access token not received');
