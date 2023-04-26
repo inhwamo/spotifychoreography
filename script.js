@@ -4,7 +4,6 @@ const albumArtContainer = document.getElementById('albumArtContainer');
 const searchingText = document.getElementById('searchingText');
 const songInfoElement = document.getElementById('song-info');
 
-
 document.addEventListener('DOMContentLoaded', function() {
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -23,6 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 5000);
     });
 });
+
 //Spotify API
 async function getAccessToken() {
     const now = new Date().getTime();
@@ -57,8 +57,6 @@ async function getAccessToken() {
 
 // Searches song then updates the HTML content
 async function searchSong(songName) {
-    const songInfoElement = document.getElementById('song-info');
-    console.log('Searching for the song...');
     const accessToken = await getAccessToken();
 
     // Search for the song
@@ -71,10 +69,8 @@ async function searchSong(songName) {
     const track = searchData.tracks.items[0];
     console.log('Track found:', track);
 
-
     // Fetch the album to get the genres
     console.log('Fetching album data...');
-
     const albumResponse = await fetch(track.album.href, {
         headers: {
             'Authorization': `Bearer ${accessToken}`
@@ -83,7 +79,6 @@ async function searchSong(songName) {
     const albumData = await albumResponse.json();
     console.log('Album data:', albumData);
 
-
     // Get the artist name and genres
     const artistName = track.artists[0].name;
     const genres = albumData.genres;
@@ -91,21 +86,21 @@ async function searchSong(songName) {
     const albumName = track.album.name;
     const trackName = track.name;
     const releaseDate = track.album.release_date;
+
+    const trackId = track.id;
+    const audioFeatures = await fetchAudioFeatures(accessToken, trackId);
+
     // Update the HTML content
     console.log('Updating HTML content...');
     albumArtContainer.innerHTML = `<img src="${imageUrl}" alt="Album Art", style="width: 300px; height: 300px;">`;
 
-
     try {
-        // Use the Genius API client access token directly (no need to fetch a new token)
-        const accessToken = "-PSQ4tLFW6U4I7Q3RQE_4_d-RzpAgvXb7PLBmJNGMtHYuVpyXQEGDna1Dq9dL4uC";
-        const lyrics = await fetchLyrics(artistName, trackName, accessToken);
+        const lyrics = await fetchLyrics(artistName, trackName, "-PSQ4tLFW6U4I7Q3RQE_4_d-RzpAgvXb7PLBmJNGMtHYuVpyXQEGDna1Dq9dL4uC");
         console.log("Lyrics:", lyrics);
         songInfoElement.innerHTML += `<div class="lyrics-container"><pre>${lyrics}</pre></div>`;
     } catch (error) {
         console.error("Error fetching lyrics:", error.message);
     }
-
 
     songInfoElement.innerHTML = `
         <p>Artist: ${artistName}</p>
@@ -113,11 +108,15 @@ async function searchSong(songName) {
         <p>Track: ${trackName}</p>
         <p>Release Date: ${releaseDate}</p>
         <p>Genres: ${genres.join(', ') || 'N/A'}</p>
+        <p>Tempo: ${audioFeatures.tempo}</p>
+        <p>Key: ${audioFeatures.key}</p>
+        <p>Time Signature: ${audioFeatures.time_signature}</p>
     `;
     console.log('HTML content updated');
-
 }
+
 // Function to fetch lyrics using Genius API
+// Not working: Genius makes it hard to scrape lyrics
 async function fetchLyrics(artist, title, accessToken) {
     const searchQuery = `${title} ${artist}`;
     const response = await fetch(
@@ -150,3 +149,15 @@ async function fetchLyrics(artist, title, accessToken) {
 
     return lyrics;
 }
+
+async function fetchAudioFeatures(spotifyApi, trackId) {
+    try {
+      const audioFeatures = await spotifyApi.getAudioFeaturesForTrack(trackId);
+      const { tempo, key, time_signature } = audioFeatures.body;
+      return { tempo, key, time_signature };
+    } catch (error) {
+      console.error('Error fetching audio features:', error.message);
+      throw error;
+    }
+  }
+  
