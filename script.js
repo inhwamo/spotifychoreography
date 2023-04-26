@@ -150,14 +150,18 @@ async function fetchLyrics(artist, title, accessToken) {
     return lyrics;
 }
 
-async function fetchAudioFeatures(spotifyApi, trackId) {
+async function fetchAudioFeatures(accessToken, trackId) {
     try {
-      const audioFeatures = await spotifyApi.getAudioFeaturesForTrack(trackId);
-      const { tempo, key, time_signature } = audioFeatures.body;
-      return { tempo, key, time_signature };
+        const response = await fetch(`https://api.spotify.com/v1/audio-features/${trackId}`, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+        const data = await response.json();
+        const { tempo, key, time_signature } = data;
+        return { tempo, key, time_signature };
     } catch (error) {
-      console.error('Error fetching audio features:', error.message);
-      throw error;
+        console.error('Error fetching audio features:', error.message);
+        throw error;
     }
-  }
-  
+}
