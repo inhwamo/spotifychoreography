@@ -15,24 +15,26 @@ async function searchLyricsUrl(artist, title) {
 }
 
 async function fetchLyrics(url) {
-  const response = await axios.get(url);
-  const html = response.data;
-  const root = parse(html);
-  const lyrics = root.querySelector('.lyrics').innerText.trim();
-  return lyrics;
+  try{
+    const response = await axios.get(url);
+    const html = response.data;
+    const root = parse(html);
+    const lyrics = root.querySelector('.lyrics').innerText.trim();
+    return lyrics;
+  } catch (error) {
+    console.error('Error fetching lyrics:', error.message);
+    throw error;
+  }
 }
-
 exports.handler = async (event) => {
-  const { artist, title } = JSON.parse(event.body);
-  
   try {
-    const lyricsUrl = await searchLyricsUrl(artist, title);
-    const lyrics = await fetchLyrics(lyricsUrl);
+    const lyrics = await fetchLyrics(event.url);
     return {
       statusCode: 200,
       headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json'
+        'Access-Control-Allow-Origin': '*', // Update this value if you want to restrict the allowed origins
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'POST',
       },
       body: JSON.stringify({ lyrics }),
     };
@@ -40,8 +42,9 @@ exports.handler = async (event) => {
     return {
       statusCode: 500,
       headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json'
+        'Access-Control-Allow-Origin': '*', // Update this value if you want to restrict the allowed origins
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'POST',
       },
       body: JSON.stringify({ error: error.message }),
     };

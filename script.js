@@ -113,7 +113,7 @@ async function searchSong(songName) {
 
 }
 async function fetchLyrics(artist, title) {
-    const apiGatewayUrl = "https://nxxfbjjkth.execute-api.ca-central-1.amazonaws.com/prod";
+    const apiGatewayUrl = "https://nxxfbjjkth.execute-api.ca-central-1.amazonaws.com/prod/geniuslyrics";
   
     const lyricsResponse = await fetch(apiGatewayUrl, {
       method: 'POST',
