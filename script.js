@@ -1,3 +1,4 @@
+// Getting DOM elements
 const form = document.getElementById('song-search-form');
 const albumArtContainer = document.getElementById('albumArtContainer');
 const searchingText = document.getElementById('searchingText');
@@ -13,7 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
         searchingText.style.display = 'block';
         form.querySelector('button').disabled = true;
 
-    await searchSong(songName);
+        await searchSong(songName);
 
         // Hide searching text and enable the button after a delay
         searchingText.style.display = 'none';
@@ -22,6 +23,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 5000);
     });
 });
+//Spotify API
 async function getAccessToken() {
     const now = new Date().getTime();
     const storedToken = localStorage.getItem('accessToken');
@@ -53,7 +55,7 @@ async function getAccessToken() {
     }
 }
 
-
+// Searches song then updates the HTML content
 async function searchSong(songName) {
     const songInfoElement = document.getElementById('song-info');
     console.log('Searching for the song...');
@@ -93,14 +95,17 @@ async function searchSong(songName) {
     console.log('Updating HTML content...');
     albumArtContainer.innerHTML = `<img src="${imageUrl}" alt="Album Art", style="width: 300px; height: 300px;">`;
 
+
     try {
-        const lyrics = await fetchLyrics(artistName, trackName);
+        // Use the Genius API client access token directly (no need to fetch a new token)
+        const accessToken = "-PSQ4tLFW6U4I7Q3RQE_4_d-RzpAgvXb7PLBmJNGMtHYuVpyXQEGDna1Dq9dL4uC";
+        const lyrics = await fetchLyrics(artistName, trackName, accessToken);
         console.log("Lyrics:", lyrics);
         songInfoElement.innerHTML += `<div class="lyrics-container"><pre>${lyrics}</pre></div>`;
-      } catch (error) {
+    } catch (error) {
         console.error("Error fetching lyrics:", error.message);
-      }
-    
+    }
+
 
     songInfoElement.innerHTML = `
         <p>Artist: ${artistName}</p>
@@ -112,19 +117,36 @@ async function searchSong(songName) {
     console.log('HTML content updated');
 
 }
-async function fetchLyrics(artist, title) {
+// Function to fetch lyrics using Genius API
+async function fetchLyrics(artist, title, accessToken) {
+    const searchQuery = `${title} ${artist}`;
+    const response = await fetch(
+        `https://api.genius.com/search?q=${encodeURIComponent(
+            searchQuery
+        )}&access_token=${accessToken}`
+    );
+    const data = await response.json();
+
+    let lyricsUrl;
+
+    if (data.response.hits.length > 0) {
+        lyricsUrl = data.response.hits[0].result.url;
+    } else {
+        throw new Error("No lyrics found");
+    }
+
     const apiGatewayUrl = "https://nxxfbjjkth.execute-api.ca-central-1.amazonaws.com/prod/geniuslyrics";
-  
+
     const lyricsResponse = await fetch(apiGatewayUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ artist, title })
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ url: lyricsUrl })
     });
-  
+
     const lyricsData = await lyricsResponse.json();
     const lyrics = lyricsData.lyrics || 'Lyrics not found';
-  
+
     return lyrics;
-  }
+}
