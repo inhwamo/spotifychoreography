@@ -101,6 +101,8 @@ async function searchSong(songName) {
     } catch (error) {
         console.error("Error fetching lyrics:", error.message);
     }
+    console.log('Audio Features:', audioFeatures);
+
 
     songInfoElement.innerHTML = `
         <p>Artist: ${artistName}</p>
@@ -111,8 +113,17 @@ async function searchSong(songName) {
         <p>Tempo: ${audioFeatures.tempo}</p>
         <p>Key: ${audioFeatures.key}</p>
         <p>Time Signature: ${audioFeatures.time_signature}</p>
+        <p>Danceability: ${audioFeatures.danceability}</p>
+        <p>Energy: ${audioFeatures.energy}</p>
+        <p>Loudness: ${audioFeatures.loudness}</p>
+        <p>Speechiness: ${audioFeatures.speechiness}</p>
+        <p>Acousticness: ${audioFeatures.acousticness}</p>
+        <p>Instrumentalness: ${audioFeatures.instrumentalness}</p>
+        <p>Liveness: ${audioFeatures.liveness}</p>
+        <p>Valence: ${audioFeatures.valence}</p>
     `;
     console.log('HTML content updated');
+
 }
 
 // Function to fetch lyrics using Genius API
@@ -158,8 +169,8 @@ async function fetchAudioFeatures(accessToken, trackId) {
             }
         });
         const data = await response.json();
-        const { tempo, key, time_signature } = data;
-        return { tempo, key, time_signature };
+        const { tempo, key, time_signature, danceability, energy, loudness, speechiness, acousticness, instrumentalness, liveness, valence } = data;
+        return { tempo, key, time_signature, danceability, energy, loudness, speechiness, acousticness, instrumentalness, liveness, valence };
     } catch (error) {
         console.error('Error fetching audio features:', error.message);
         throw error;
