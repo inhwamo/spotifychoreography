@@ -21,3 +21,18 @@
     font-family: monospace;
     white-space: pre-wrap;
   }
+
+  .rating-container {
+    display: flex;
+  }
+  
+  .rating-element {
+    width: 20px;
+    height: 20px;
+    background-color: lightgray;
+    margin-right: 4px;
+  }
+  
+  .rating-element.active {
+    background-color: blue;
+  }

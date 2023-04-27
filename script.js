@@ -7,6 +7,7 @@ const songInfoElement = document.getElementById('song-info');
 document.addEventListener('DOMContentLoaded', function() {
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
+        setRatingContainersVisible(false);
         const songName = document.getElementById('song-name').value;
 
         // Show searching text and disable the button
@@ -123,6 +124,10 @@ async function searchSong(songName) {
         <p>Valence: ${audioFeatures.valence}</p>
     `;
     updateAudioFeatures(audioFeatures);
+    setRatingContainersVisible(true);
+
+    updateDanceabilityBar(audioFeatures.danceability);
+
 
     document.getElementById('audio-features').style.display = 'block';
 
@@ -188,5 +193,28 @@ function updateAudioFeatures(audioFeatures) {
     document.getElementById('danceability-value').textContent = danceabilityNormalized.toFixed(2);
   
     // Add other audio features here, following the same pattern
+  }
+  
+function setRatingContainersVisible(visible) {
+    const ratingContainers = document.getElementById('ratingContainers');
+    ratingContainers.style.display = visible ? 'block' : 'none';
+  }
+  
+
+function convertToScale(value) {
+    return Math.ceil(value * 5);
+  }
+function updateDanceabilityBar(danceability) {
+    const scaleValue = convertToScale(danceability);
+    const container = document.getElementById('danceabilityContainer');
+    const ratingElements = container.querySelectorAll('.rating-element');
+  
+    ratingElements.forEach((element, index) => {
+      if (index < scaleValue) {
+        element.classList.add('active');
+      } else {
+        element.classList.remove('active');
+      }
+    });
   }
   
