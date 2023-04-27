@@ -222,7 +222,6 @@ function updateEnergyBar(energy) {
     const scaleValue = convertToScale(energy);
     const container = document.getElementById('energyContainer');
     const ratingElements = container.querySelectorAll('.rating-element');
-    updateRatingContainer(container, value);
 
     ratingElements.forEach((element, index) => {
         if (index < scaleValue) {
