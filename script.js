@@ -122,6 +122,8 @@ async function searchSong(songName) {
         <p>Liveness: ${audioFeatures.liveness}</p>
         <p>Valence: ${audioFeatures.valence}</p>
     `;
+    updateAudioFeatures(audioFeatures);
+
     document.getElementById('audio-features').style.display = 'block';
 
   
@@ -171,8 +173,8 @@ async function fetchAudioFeatures(accessToken, trackId) {
                 'Authorization': `Bearer ${accessToken}`
             }
         });
-        const data = await response.json();
-        const { tempo, key, time_signature, danceability, energy, loudness, speechiness, acousticness, instrumentalness, liveness, valence } = data;
+        const audioFeatures = await response.json();
+        const { tempo, key, time_signature, danceability, energy, loudness, speechiness, acousticness, instrumentalness, liveness, valence } = audioFeatures;
         return { tempo, key, time_signature, danceability, energy, loudness, speechiness, acousticness, instrumentalness, liveness, valence };
     } catch (error) {
         console.error('Error fetching audio features:', error.message);
