@@ -122,6 +122,9 @@ async function searchSong(songName) {
         <p>Liveness: ${audioFeatures.liveness}</p>
         <p>Valence: ${audioFeatures.valence}</p>
     `;
+    document.getElementById('audio-features').style.display = 'block';
+
+  
     console.log('HTML content updated');
 
 }
@@ -180,3 +183,13 @@ async function fetchAudioFeatures(accessToken, trackId) {
 const danceabilityNormalized = data.danceability; // Assuming you've already normalized the value
 document.getElementById('danceability').value = danceabilityNormalized;
 document.getElementById('danceability-value').textContent = danceabilityNormalized.toFixed(2);
+
+function updateAudioFeatures(audioFeatures) {
+    // Update the danceability progress bar
+    const danceabilityNormalized = audioFeatures.danceability;
+    document.getElementById('danceability').value = danceabilityNormalized;
+    document.getElementById('danceability-value').textContent = danceabilityNormalized.toFixed(2);
+  
+    // Add other audio features here, following the same pattern
+  }
+  
