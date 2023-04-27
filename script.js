@@ -127,7 +127,8 @@ async function searchSong(songName) {
     setRatingContainersVisible(true);
 
     updateDanceabilityBar(audioFeatures.danceability);
-
+    updateEnergyBar(audioFeatures.energy);
+    updateValenceBar(audioFeatures.valence);
 
     document.getElementById('audio-features').style.display = 'block';
 
@@ -216,5 +217,14 @@ function updateDanceabilityBar(danceability) {
         element.classList.remove('active');
       }
     });
+  }
+  function updateEnergyBar(value) {
+    const container = document.getElementById('energyContainer');
+    updateRatingContainer(container, value);
+  }
+  
+  function updateValenceBar(value) {
+    const container = document.getElementById('valenceContainer');
+    updateRatingContainer(container, value);
   }
   
