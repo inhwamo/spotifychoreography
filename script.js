@@ -218,7 +218,7 @@ function updateDanceabilityBar(danceability) {
       }
     });
   }
-function updateEnergyBar(value) {
+function updateEnergyBar(energy) {
     const scaleValue = convertToScale(energy);
     const container = document.getElementById('energyContainer');
     const ratingElements = container.querySelectorAll('.rating-element');
@@ -233,7 +233,7 @@ function updateEnergyBar(value) {
       });
   }
   
-function updateValenceBar(value) {
+function updateValenceBar(valence) {
     const scaleValue = convertToScale(valence);
     const container = document.getElementById('valenceContainer');
     const ratingElements = container.querySelectorAll('.rating-element');
