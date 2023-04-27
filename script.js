@@ -176,3 +176,7 @@ async function fetchAudioFeatures(accessToken, trackId) {
         throw error;
     }
 }
+
+const danceabilityNormalized = data.danceability; // Assuming you've already normalized the value
+document.getElementById('danceability').value = danceabilityNormalized;
+document.getElementById('danceability-value').textContent = danceabilityNormalized.toFixed(2);
