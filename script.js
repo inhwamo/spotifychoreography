@@ -218,13 +218,32 @@ function updateDanceabilityBar(danceability) {
       }
     });
   }
-  function updateEnergyBar(value) {
+function updateEnergyBar(value) {
+    const scaleValue = convertToScale(energy);
     const container = document.getElementById('energyContainer');
+    const ratingElements = container.querySelectorAll('.rating-element');
     updateRatingContainer(container, value);
+
+    ratingElements.forEach((element, index) => {
+        if (index < scaleValue) {
+          element.classList.add('active');
+        } else {
+          element.classList.remove('active');
+        }
+      });
   }
   
-  function updateValenceBar(value) {
+function updateValenceBar(value) {
+    const scaleValue = convertToScale(valence);
     const container = document.getElementById('valenceContainer');
-    updateRatingContainer(container, value);
-  }
+    const ratingElements = container.querySelectorAll('.rating-element');
+
+    ratingElements.forEach((element, index) => {
+        if (index < scaleValue) {
+          element.classList.add('active');
+        } else {
+          element.classList.remove('active');
+        }
+      });  
+}
   
