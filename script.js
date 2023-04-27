@@ -123,14 +123,11 @@ async function searchSong(songName) {
         <p>Liveness: ${audioFeatures.liveness}</p>
         <p>Valence: ${audioFeatures.valence}</p>
     `;
-    updateAudioFeatures(audioFeatures);
     setRatingContainersVisible(true);
 
     updateDanceabilityBar(audioFeatures.danceability);
     updateEnergyBar(audioFeatures.energy);
     updateValenceBar(audioFeatures.valence);
-
-    document.getElementById('audio-features').style.display = 'block';
 
   
     console.log('HTML content updated');
@@ -187,15 +184,7 @@ async function fetchAudioFeatures(accessToken, trackId) {
         throw error;
     }
 }
-function updateAudioFeatures(audioFeatures) {
-    // Update the danceability progress bar
-    const danceabilityNormalized = audioFeatures.danceability;
-    document.getElementById('danceability').value = danceabilityNormalized;
-    document.getElementById('danceability-value').textContent = danceabilityNormalized.toFixed(2);
-  
-    // Add other audio features here, following the same pattern
-  }
-  
+
 function setRatingContainersVisible(visible) {
     const ratingContainers = document.getElementById('ratingContainers');
     ratingContainers.style.display = visible ? 'block' : 'none';
