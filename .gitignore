@@ -1,0 +1,22 @@
+# Environment variables
+.env
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Cache
+.lyrics_cache/
+*.mp3
+*.wav
+*.m4a
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
