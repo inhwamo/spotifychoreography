@@ -2,3 +2,4 @@ openai-whisper
 flask
 flask-cors
 yt-dlp
+librosa

@@ -11,34 +11,57 @@
 </head>
 <body>
     <div id="app">
-        <!-- Input Screen -->
-        <div id="input-screen" class="screen active">
-            <div class="logo-container">
-                <h1 class="logo">Dance Card</h1>
-                <p class="tagline">Generator</p>
-            </div>
-
-            <div class="input-container">
-                <div class="input-wrapper">
-                    <input type="text" id="youtube-url" placeholder="Paste YouTube URL here..." autocomplete="off">
-                    <button id="generate-btn" class="btn-primary">
-                        <span class="btn-text">Let's Dance!</span>
-                        <span class="btn-icon">&#x1F3B6;</span>
-                    </button>
+        <!-- Library Screen (Homepage) -->
+        <div id="library-screen" class="screen active">
+            <div class="library-header">
+                <div class="logo-container">
+                    <h1 class="logo">Dance Card</h1>
+                    <p class="tagline">Generator</p>
                 </div>
-                <p class="hint">Paste any YouTube music video URL to generate your dance routine</p>
+                <button id="request-song-btn" class="btn-secondary">Request a Song</button>
             </div>
 
-            <div id="api-key-section" class="api-key-section">
-                <button id="toggle-api-key" class="btn-secondary">Settings</button>
-                <div id="api-key-container" class="api-key-container hidden">
-                    <label for="api-key">Claude API Key:</label>
-                    <input type="password" id="api-key" placeholder="sk-ant-...">
-                    <p class="api-hint">Your API key is stored locally and never sent to any server except Anthropic's API.</p>
+            <div class="library-filters">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="1">Easy</button>
+                <button class="filter-btn" data-filter="2">Medium</button>
+                <button class="filter-btn" data-filter="3">Hard</button>
+            </div>
+
+            <div id="song-library" class="song-library">
+                <div class="loading-library">
+                    <p>Loading songs...</p>
                 </div>
             </div>
 
-            <div id="error-message" class="error-message hidden"></div>
+            <div id="empty-library" class="empty-library hidden">
+                <p>No songs available yet.</p>
+                <p class="hint">Request a song and we'll add it to the library!</p>
+            </div>
+        </div>
+
+        <!-- Request Song Modal -->
+        <div id="request-modal" class="modal hidden">
+            <div class="modal-content">
+                <button class="modal-close" id="close-request-modal">&times;</button>
+                <h2>Request a Song</h2>
+                <p>Want to dance to a specific song? Submit a request!</p>
+                <form id="request-form">
+                    <div class="form-group">
+                        <label for="request-url">YouTube URL</label>
+                        <input type="text" id="request-url" placeholder="https://youtube.com/watch?v=..." required>
+                    </div>
+                    <div class="form-group">
+                        <label for="request-note">Note (optional)</label>
+                        <textarea id="request-note" placeholder="Any special requests or notes..."></textarea>
+                    </div>
+                    <button type="submit" class="btn-primary">Submit Request</button>
+                </form>
+                <div id="request-success" class="request-success hidden">
+                    <span class="success-icon">&#x2714;</span>
+                    <p>Request submitted! We'll review it soon.</p>
+                </div>
+            </div>
         </div>
 
         <!-- Loading Screen -->
@@ -54,7 +77,7 @@
                         <div class="leg right"></div>
                     </div>
                 </div>
-                <h2 id="loading-text">Analyzing your song...</h2>
+                <h2 id="loading-text">Loading your dance...</h2>
                 <div class="loading-bar">
                     <div class="loading-progress"></div>
                 </div>
@@ -64,7 +87,7 @@
         <!-- Dance Screen -->
         <div id="dance-screen" class="screen">
             <div class="dance-header">
-                <button id="back-btn" class="btn-icon-only" title="Back">&#x2190;</button>
+                <button id="back-btn" class="btn-icon-only" title="Back to Library">&#x2190;</button>
                 <div class="song-info-header">
                     <div class="song-info-main">
                         <h2 id="song-title">Song Title</h2>
@@ -72,13 +95,9 @@
                     </div>
                     <div class="song-meta">
                         <div id="song-vibe" class="vibe-badge">Energetic</div>
-                        <div id="saved-badge" class="saved-badge hidden">
-                            <span class="saved-icon">&#x2714;</span>
-                            <span>Saved Routine</span>
-                        </div>
                     </div>
                 </div>
-                <button id="regenerate-btn" class="btn-icon-only" title="Generate New Routine">&#x21BB;</button>
+                <div class="header-spacer"></div>
             </div>
 
             <div class="dance-content">
@@ -102,52 +121,56 @@
                     </div>
 
                     <div class="cards-section">
+                        <!-- Section Indicator -->
+                        <div id="section-indicator" class="section-indicator">
+                            <span id="section-icon" class="section-icon"></span>
+                            <span id="section-name" class="section-name">VERSE 1</span>
+                        </div>
+
+                        <!-- Lyrics Display (Current + Next Line Only) -->
+                        <div id="lyrics-display" class="lyrics-display">
+                            <p id="current-lyric" class="current-lyric"></p>
+                            <p id="next-lyric" class="next-lyric"></p>
+                        </div>
+
                         <div id="contextual-message" class="contextual-message">Get ready to move!</div>
 
                         <div class="cards-container">
-                        <div id="current-card" class="dance-card current">
-                            <div class="card-header">
-                                <span class="move-number">Move 1</span>
-                                <span class="difficulty">
-                                    <span class="star filled">&#x2605;</span>
-                                    <span class="star">&#x2605;</span>
-                                    <span class="star">&#x2605;</span>
-                                </span>
+                            <div id="current-card" class="dance-card current">
+                                <div class="card-header">
+                                    <span class="move-number">Move 1</span>
+                                    <span class="difficulty">
+                                        <span class="star filled">&#x2605;</span>
+                                        <span class="star">&#x2605;</span>
+                                        <span class="star">&#x2605;</span>
+                                    </span>
+                                </div>
+                                <div class="card-pictogram">
+                                    <div class="pictogram-container" id="current-pictogram"></div>
+                                </div>
+                                <h3 class="move-name" id="current-move-name">Step Touch</h3>
+                                <div class="move-details">
+                                    <span class="body-part" id="current-body-part">Legs</span>
+                                    <span class="beat-count" id="current-beats">8 counts</span>
+                                </div>
+                                <!-- Beat Counter -->
+                                <div class="beat-counter">
+                                    <div id="beat-dots" class="beat-dots"></div>
+                                    <span id="beat-number" class="beat-number">1</span>
+                                </div>
                             </div>
-                            <div class="card-pictogram">
-                                <div class="pictogram-container" id="current-pictogram"></div>
-                            </div>
-                            <h3 class="move-name" id="current-move-name">Step Touch</h3>
-                            <div class="move-details">
-                                <span class="body-part" id="current-body-part">Legs</span>
-                                <span class="beat-count" id="current-beats">8 counts</span>
+
+                            <div id="next-card" class="dance-card next">
+                                <div class="card-label">UP NEXT</div>
+                                <div class="card-pictogram small">
+                                    <div class="pictogram-container" id="next-pictogram"></div>
+                                </div>
+                                <h4 class="move-name" id="next-move-name">Body Roll</h4>
                             </div>
                         </div>
 
-                        <div id="next-card" class="dance-card next">
-                            <div class="card-label">UP NEXT</div>
-                            <div class="card-pictogram small">
-                                <div class="pictogram-container" id="next-pictogram"></div>
-                            </div>
-                            <h4 class="move-name" id="next-move-name">Body Roll</h4>
-                        </div>
-                    </div>
-
-                    <div class="move-progress">
-                        <div id="move-dots" class="move-dots"></div>
-                    </div>
-                    </div>
-                </div>
-
-                <!-- Lyrics Panel -->
-                <div class="lyrics-section">
-                    <div class="lyrics-header">
-                        <h3>Lyrics</h3>
-                        <button id="toggle-lyrics-btn" class="btn-icon-only small" title="Toggle Lyrics">&#x25BC;</button>
-                    </div>
-                    <div id="lyrics-container" class="lyrics-container">
-                        <div id="lyrics-content" class="lyrics-content">
-                            <p class="lyrics-placeholder">Loading lyrics...</p>
+                        <div class="move-progress">
+                            <div id="move-dots" class="move-dots"></div>
                         </div>
                     </div>
                 </div>
@@ -158,18 +181,27 @@
         <div id="complete-screen" class="screen">
             <div class="complete-content">
                 <div class="celebration">&#x1F389;</div>
-                <h2>Amazing Job!</h2>
-                <p>You completed the entire routine!</p>
+                <h2>Great Job!</h2>
+                <p id="complete-song-info">You completed the entire routine!</p>
+                <div class="complete-stats">
+                    <div class="stat">
+                        <span class="stat-number" id="total-moves">12</span>
+                        <span class="stat-label">Moves</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number" id="song-duration">3:45</span>
+                        <span class="stat-label">Duration</span>
+                    </div>
+                </div>
                 <div class="complete-actions">
                     <button id="replay-btn" class="btn-primary">Dance Again</button>
-                    <button id="new-song-btn" class="btn-secondary">Try Another Song</button>
+                    <button id="new-song-btn" class="btn-secondary">Back to Library</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script src="moves.js"></script>
-    <script src="database.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

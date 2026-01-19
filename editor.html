@@ -1,0 +1,1489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lyrics Editor - Dance Card Generator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #FF2D78;
+            --secondary: #00D4FF;
+            --accent: #FFE135;
+            --green: #00F5A0;
+            --dark: #1a1a2e;
+            --darker: #0f0f1a;
+            --light: #ffffff;
+            --verse-color: #667eea;
+            --chorus-color: #f5576c;
+            --bridge-color: #ff6b35;
+            --pre-chorus-color: #9b5de5;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #2d1b4e 50%, #1a1a2e 100%);
+            min-height: 100vh;
+            color: var(--light);
+        }
+
+        /* Header */
+        .editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: rgba(0,0,0,0.3);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .song-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .song-info img {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .song-info h1 {
+            font-size: 1.2rem;
+            background: linear-gradient(135deg, #FF2D78, #FF6B35);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .song-info .artist {
+            color: rgba(255,255,255,0.6);
+            font-size: 0.9rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #FF2D78, #FF6B35);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .btn-success {
+            background: var(--green);
+            color: var(--dark);
+        }
+
+        .btn:hover { transform: scale(1.05); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* Main container */
+        .editor-container {
+            display: grid;
+            grid-template-rows: auto auto 1fr;
+            height: calc(100vh - 70px);
+            padding: 20px;
+            gap: 20px;
+        }
+
+        /* Video section */
+        .video-section {
+            display: grid;
+            grid-template-columns: 480px 1fr;
+            gap: 20px;
+        }
+
+        .video-wrapper {
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            aspect-ratio: 16/9;
+        }
+
+        .video-wrapper iframe {
+            width: 100%;
+            height: 100%;
+        }
+
+        .video-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .time-display {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .current-time {
+            font-size: 3rem;
+            font-family: monospace;
+            font-weight: 700;
+            color: var(--secondary);
+        }
+
+        .duration {
+            color: rgba(255,255,255,0.5);
+            font-size: 1rem;
+        }
+
+        .playback-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .playback-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .playback-btn:hover {
+            background: var(--primary);
+        }
+
+        .playback-btn.play-pause {
+            width: 60px;
+            height: 60px;
+            background: var(--primary);
+            font-size: 1.5rem;
+        }
+
+        .current-lyric-display {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 12px;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .current-lyric-text {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        /* Timeline section */
+        .timeline-section {
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            padding: 15px;
+        }
+
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .timeline-header h3 {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .zoom-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 5px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.1);
+            color: white;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .zoom-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .timeline-wrapper {
+            position: relative;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        .timeline-container {
+            position: relative;
+            height: 80px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            min-width: 100%;
+        }
+
+        .timeline-ruler {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .ruler-mark {
+            position: absolute;
+            top: 0;
+            font-size: 10px;
+            color: rgba(255,255,255,0.4);
+            transform: translateX(-50%);
+        }
+
+        .ruler-mark::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            width: 1px;
+            height: 5px;
+            background: rgba(255,255,255,0.2);
+        }
+
+        .timeline-tracks {
+            position: absolute;
+            top: 25px;
+            left: 0;
+            right: 0;
+            bottom: 5px;
+        }
+
+        .lyric-block {
+            position: absolute;
+            height: 45px;
+            top: 2px;
+            background: linear-gradient(135deg, var(--verse-color), #764ba2);
+            border-radius: 6px;
+            cursor: move;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 11px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            padding: 0 12px;
+            border: 2px solid transparent;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            user-select: none;
+        }
+
+        .lyric-block:hover {
+            border-color: rgba(255,255,255,0.5);
+            box-shadow: 0 0 15px rgba(255,255,255,0.2);
+        }
+
+        .lyric-block.selected {
+            border-color: var(--accent);
+            box-shadow: 0 0 20px rgba(255,225,53,0.4);
+        }
+
+        .lyric-block.chorus {
+            background: linear-gradient(135deg, var(--chorus-color), #f093fb);
+        }
+
+        .lyric-block.bridge {
+            background: linear-gradient(135deg, var(--bridge-color), #feca57);
+        }
+
+        .lyric-block.pre-chorus {
+            background: linear-gradient(135deg, var(--pre-chorus-color), #a29bfe);
+        }
+
+        .drag-handle {
+            position: absolute;
+            width: 10px;
+            height: 100%;
+            cursor: ew-resize;
+            background: rgba(255,255,255,0.2);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .lyric-block:hover .drag-handle {
+            opacity: 1;
+        }
+
+        .drag-handle.left {
+            left: 0;
+            border-radius: 6px 0 0 6px;
+        }
+
+        .drag-handle.right {
+            right: 0;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .playhead {
+            position: absolute;
+            width: 2px;
+            height: 100%;
+            background: #ff0000;
+            top: 0;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .playhead::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -6px;
+            border-left: 7px solid transparent;
+            border-right: 7px solid transparent;
+            border-top: 10px solid #ff0000;
+        }
+
+        /* Lyrics list section */
+        .lyrics-section {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+            overflow: hidden;
+        }
+
+        .lyrics-list-container {
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .lyrics-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .lyrics-list-header h3 {
+            font-size: 0.95rem;
+        }
+
+        .lyrics-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .lyric-row {
+            display: grid;
+            grid-template-columns: 30px 70px 70px 1fr auto;
+            gap: 10px;
+            align-items: center;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 5px;
+            background: rgba(255,255,255,0.03);
+            transition: background 0.2s;
+        }
+
+        .lyric-row:hover {
+            background: rgba(255,255,255,0.08);
+        }
+
+        .lyric-row.selected {
+            background: rgba(255,225,53,0.15);
+            border: 1px solid rgba(255,225,53,0.3);
+        }
+
+        .lyric-row .line-num {
+            color: rgba(255,255,255,0.4);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        .lyric-row .time-input {
+            padding: 6px 8px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 5px;
+            color: var(--secondary);
+            font-family: monospace;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+
+        .lyric-row .time-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .lyric-row .lyric-text-input {
+            padding: 6px 10px;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 5px;
+            color: white;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        .lyric-row .lyric-text-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .lyric-row .row-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .row-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 5px;
+            border: none;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .row-btn:hover {
+            background: var(--primary);
+        }
+
+        .row-btn.play:hover {
+            background: var(--green);
+            color: var(--dark);
+        }
+
+        .lyrics-list-footer {
+            padding: 15px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .bulk-offset-input {
+            width: 60px;
+            padding: 8px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 5px;
+            color: white;
+            text-align: center;
+        }
+
+        /* Tools panel */
+        .tools-panel {
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .tools-panel h3 {
+            font-size: 0.95rem;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .tool-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .tool-group label {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.6);
+        }
+
+        .tool-btn {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.05);
+            color: white;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.85rem;
+            text-align: left;
+            transition: all 0.2s;
+        }
+
+        .tool-btn:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: var(--primary);
+        }
+
+        .keyboard-hints {
+            margin-top: auto;
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            font-size: 0.75rem;
+        }
+
+        .keyboard-hints h4 {
+            margin-bottom: 10px;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .hint-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .hint-key {
+            background: rgba(255,255,255,0.1);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+
+        .hint-action {
+            color: rgba(255,255,255,0.5);
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .loading-content {
+            text-align: center;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .video-section {
+                grid-template-columns: 1fr;
+            }
+
+            .video-wrapper {
+                max-width: 600px;
+                margin: 0 auto;
+            }
+
+            .video-controls {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+
+            .time-display {
+                flex: 1;
+                min-width: 200px;
+            }
+
+            .current-lyric-display {
+                flex: 2;
+                min-width: 300px;
+            }
+
+            .lyrics-section {
+                grid-template-columns: 1fr;
+            }
+
+            .tools-panel {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+
+            .keyboard-hints {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p>Loading song data...</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="editor-header">
+        <div class="song-info">
+            <img id="song-thumbnail" src="" alt="">
+            <div>
+                <h1 id="song-title">Loading...</h1>
+                <p class="artist" id="song-artist"></p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="window.close()">Cancel</button>
+            <button class="btn btn-success" id="save-btn" onclick="saveChanges()">Save Changes</button>
+        </div>
+    </div>
+
+    <!-- Main editor -->
+    <div class="editor-container">
+        <!-- Video + Controls -->
+        <div class="video-section">
+            <div class="video-wrapper">
+                <div id="youtube-player"></div>
+            </div>
+            <div class="video-controls">
+                <div class="time-display">
+                    <div class="current-time" id="current-time">0:00.0</div>
+                    <div class="duration">/ <span id="duration">0:00</span></div>
+                </div>
+                <div class="playback-controls">
+                    <button class="playback-btn" onclick="seekRelative(-5)" title="Back 5s">-5</button>
+                    <button class="playback-btn" onclick="seekRelative(-1)" title="Back 1s">-1</button>
+                    <button class="playback-btn play-pause" id="play-pause-btn" onclick="togglePlayPause()">&#9654;</button>
+                    <button class="playback-btn" onclick="seekRelative(1)" title="Forward 1s">+1</button>
+                    <button class="playback-btn" onclick="seekRelative(5)" title="Forward 5s">+5</button>
+                </div>
+                <div class="current-lyric-display">
+                    <div class="current-lyric-text" id="current-lyric-text">Play to see lyrics</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="timeline-section">
+            <div class="timeline-header">
+                <h3>Timeline - Drag blocks to adjust timing</h3>
+                <div class="zoom-controls">
+                    <button class="zoom-btn" onclick="zoomOut()">-</button>
+                    <span id="zoom-level">100%</span>
+                    <button class="zoom-btn" onclick="zoomIn()">+</button>
+                </div>
+            </div>
+            <div class="timeline-wrapper" id="timeline-wrapper">
+                <div class="timeline-container" id="timeline-container">
+                    <div class="timeline-ruler" id="timeline-ruler"></div>
+                    <div class="timeline-tracks" id="timeline-tracks"></div>
+                    <div class="playhead" id="playhead"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lyrics list + Tools -->
+        <div class="lyrics-section">
+            <div class="lyrics-list-container">
+                <div class="lyrics-list-header">
+                    <h3>Lyrics List</h3>
+                    <button class="btn btn-secondary" style="padding:6px 12px;font-size:0.8rem" onclick="addLine()">+ Add Line</button>
+                </div>
+                <div class="lyrics-list" id="lyrics-list">
+                    <!-- Populated by JS -->
+                </div>
+                <div class="lyrics-list-footer">
+                    <button class="btn btn-secondary" style="padding:8px 15px;font-size:0.85rem" onclick="mergeSelected()">Merge Selected</button>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span style="font-size:0.85rem">Offset:</span>
+                        <input type="number" class="bulk-offset-input" id="bulk-offset" value="0" step="0.1">
+                        <span style="font-size:0.85rem">s</span>
+                        <button class="btn btn-secondary" style="padding:8px 12px;font-size:0.85rem" onclick="applyBulkOffset()">Apply</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tools-panel">
+                <h3>Tools</h3>
+
+                <div class="tool-group">
+                    <label>Quick Actions</label>
+                    <button class="tool-btn" onclick="setStartAtPlayhead()">Set Start at Playhead</button>
+                    <button class="tool-btn" onclick="setEndAtPlayhead()">Set End at Playhead</button>
+                    <button class="tool-btn" onclick="splitAtPlayhead()">Split at Playhead</button>
+                </div>
+
+                <div class="tool-group">
+                    <label>Selection</label>
+                    <button class="tool-btn" onclick="selectAll()">Select All</button>
+                    <button class="tool-btn" onclick="deleteSelected()">Delete Selected</button>
+                </div>
+
+                <div class="tool-group">
+                    <label>Alignment</label>
+                    <button class="tool-btn" onclick="autoAlignGaps()">Auto-fill Gaps</button>
+                    <button class="tool-btn" onclick="resetToOriginal()">Reset to Original</button>
+                </div>
+
+                <div class="keyboard-hints">
+                    <h4>Keyboard Shortcuts</h4>
+                    <div class="hint-row">
+                        <span class="hint-key">Space</span>
+                        <span class="hint-action">Play/Pause</span>
+                    </div>
+                    <div class="hint-row">
+                        <span class="hint-key">&#8592; &#8594;</span>
+                        <span class="hint-action">Seek 1s</span>
+                    </div>
+                    <div class="hint-row">
+                        <span class="hint-key">Shift+Arrow</span>
+                        <span class="hint-action">Seek 0.1s</span>
+                    </div>
+                    <div class="hint-row">
+                        <span class="hint-key">Enter</span>
+                        <span class="hint-action">Set start time</span>
+                    </div>
+                    <div class="hint-row">
+                        <span class="hint-key">Shift+Enter</span>
+                        <span class="hint-action">Set end time</span>
+                    </div>
+                    <div class="hint-row">
+                        <span class="hint-key">&#8593; &#8595;</span>
+                        <span class="hint-action">Navigate lines</span>
+                    </div>
+                    <div class="hint-row">
+                        <span class="hint-key">S</span>
+                        <span class="hint-action">Split at playhead</span>
+                    </div>
+                    <div class="hint-row">
+                        <span class="hint-key">Delete</span>
+                        <span class="hint-action">Delete line</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- YouTube IFrame API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+
+    <script>
+        // State
+        let videoId = null;
+        let player = null;
+        let lyrics = [];
+        let originalLyrics = [];
+        let selectedLineIndex = -1;
+        let duration = 0;
+        let zoom = 50; // pixels per second
+        let isPlaying = false;
+        let adminPassword = '';
+        let isDragging = false;
+        let dragInfo = null;
+
+        // Get video ID from URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        videoId = urlParams.get('id');
+        adminPassword = localStorage.getItem('admin_password') || '';
+
+        if (!videoId) {
+            alert('No video ID provided');
+            window.close();
+        }
+
+        // Initialize YouTube player
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('youtube-player', {
+                videoId: videoId,
+                playerVars: {
+                    autoplay: 0,
+                    controls: 1,
+                    modestbranding: 1,
+                    rel: 0
+                },
+                events: {
+                    onReady: onPlayerReady,
+                    onStateChange: onPlayerStateChange
+                }
+            });
+        }
+
+        function onPlayerReady(event) {
+            duration = player.getDuration();
+            document.getElementById('duration').textContent = formatTime(duration);
+            loadSongData();
+            startTimeUpdate();
+        }
+
+        function onPlayerStateChange(event) {
+            isPlaying = (event.data === YT.PlayerState.PLAYING);
+            updatePlayPauseButton();
+        }
+
+        // Load song data from API
+        async function loadSongData() {
+            try {
+                const response = await fetch(`/api/songs/${videoId}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Update header
+                document.getElementById('song-title').textContent = data.song.title;
+                document.getElementById('song-artist').textContent = data.song.artist;
+                document.getElementById('song-thumbnail').src = data.song.thumbnail_url || '';
+
+                // Load lyrics
+                lyrics = (data.lyrics?.segments || []).map((seg, i) => ({
+                    id: i,
+                    text: seg.text,
+                    start: seg.start,
+                    end: seg.end || (seg.start + 3), // Default 3 sec duration if no end
+                    section: seg.section || 'verse'
+                }));
+
+                // Store original for reset
+                originalLyrics = JSON.parse(JSON.stringify(lyrics));
+
+                // Render
+                renderTimeline();
+                renderLyricsList();
+
+                // Hide loading
+                document.getElementById('loading-overlay').style.display = 'none';
+
+            } catch (error) {
+                alert('Error loading song: ' + error.message);
+                document.getElementById('loading-overlay').innerHTML =
+                    '<div class="loading-content"><p style="color:var(--primary)">Error: ' + error.message + '</p></div>';
+            }
+        }
+
+        // Time update loop
+        function startTimeUpdate() {
+            setInterval(() => {
+                if (player && player.getCurrentTime) {
+                    const currentTime = player.getCurrentTime();
+                    document.getElementById('current-time').textContent = formatTimeMs(currentTime);
+                    updatePlayhead(currentTime);
+                    updateCurrentLyric(currentTime);
+                }
+            }, 50); // 20 FPS
+        }
+
+        // Format time (M:SS)
+        function formatTime(seconds) {
+            if (!seconds || isNaN(seconds)) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // Format time with milliseconds (M:SS.s)
+        function formatTimeMs(seconds) {
+            if (!seconds || isNaN(seconds)) return '0:00.0';
+            const mins = Math.floor(seconds / 60);
+            const secs = (seconds % 60).toFixed(1);
+            return `${mins}:${secs.padStart(4, '0')}`;
+        }
+
+        // Parse time from M:SS.s format
+        function parseTime(timeStr) {
+            const parts = timeStr.split(':');
+            if (parts.length === 2) {
+                const mins = parseInt(parts[0]) || 0;
+                const secs = parseFloat(parts[1]) || 0;
+                return mins * 60 + secs;
+            }
+            return parseFloat(timeStr) || 0;
+        }
+
+        // Playback controls
+        function togglePlayPause() {
+            if (isPlaying) {
+                player.pauseVideo();
+            } else {
+                player.playVideo();
+            }
+        }
+
+        function updatePlayPauseButton() {
+            const btn = document.getElementById('play-pause-btn');
+            btn.innerHTML = isPlaying ? '&#10074;&#10074;' : '&#9654;';
+        }
+
+        function seekRelative(seconds) {
+            const currentTime = player.getCurrentTime();
+            player.seekTo(Math.max(0, currentTime + seconds), true);
+        }
+
+        function seekTo(time) {
+            player.seekTo(time, true);
+        }
+
+        // Update playhead position
+        function updatePlayhead(currentTime) {
+            const playhead = document.getElementById('playhead');
+            const left = currentTime * zoom;
+            playhead.style.left = left + 'px';
+
+            // Auto-scroll timeline to keep playhead visible
+            const wrapper = document.getElementById('timeline-wrapper');
+            const wrapperWidth = wrapper.clientWidth;
+            const scrollLeft = wrapper.scrollLeft;
+
+            if (left < scrollLeft || left > scrollLeft + wrapperWidth - 50) {
+                wrapper.scrollLeft = left - 100;
+            }
+        }
+
+        // Update current lyric display
+        function updateCurrentLyric(currentTime) {
+            const currentLyric = lyrics.find(l => currentTime >= l.start && currentTime <= l.end);
+            const display = document.getElementById('current-lyric-text');
+
+            if (currentLyric) {
+                display.textContent = currentLyric.text;
+            } else {
+                display.textContent = '...';
+            }
+        }
+
+        // Zoom controls
+        function zoomIn() {
+            zoom = Math.min(zoom * 1.5, 200);
+            document.getElementById('zoom-level').textContent = Math.round(zoom * 2) + '%';
+            renderTimeline();
+        }
+
+        function zoomOut() {
+            zoom = Math.max(zoom / 1.5, 10);
+            document.getElementById('zoom-level').textContent = Math.round(zoom * 2) + '%';
+            renderTimeline();
+        }
+
+        // Render timeline
+        function renderTimeline() {
+            const container = document.getElementById('timeline-container');
+            const tracks = document.getElementById('timeline-tracks');
+            const ruler = document.getElementById('timeline-ruler');
+
+            // Set container width based on duration and zoom
+            const totalWidth = duration * zoom;
+            container.style.width = Math.max(totalWidth, 800) + 'px';
+
+            // Render ruler
+            ruler.innerHTML = '';
+            const interval = zoom > 30 ? 10 : (zoom > 15 ? 30 : 60); // seconds between marks
+            for (let t = 0; t <= duration; t += interval) {
+                const mark = document.createElement('div');
+                mark.className = 'ruler-mark';
+                mark.style.left = (t * zoom) + 'px';
+                mark.textContent = formatTime(t);
+                ruler.appendChild(mark);
+            }
+
+            // Render lyric blocks
+            tracks.innerHTML = '';
+            lyrics.forEach((lyric, index) => {
+                const block = document.createElement('div');
+                block.className = `lyric-block ${lyric.section || 'verse'}`;
+                if (index === selectedLineIndex) {
+                    block.classList.add('selected');
+                }
+
+                const left = lyric.start * zoom;
+                const width = Math.max((lyric.end - lyric.start) * zoom, 20);
+                block.style.left = left + 'px';
+                block.style.width = width + 'px';
+                block.textContent = lyric.text.substring(0, 30) + (lyric.text.length > 30 ? '...' : '');
+                block.title = lyric.text;
+                block.dataset.index = index;
+
+                // Drag handles
+                const leftHandle = document.createElement('div');
+                leftHandle.className = 'drag-handle left';
+                leftHandle.dataset.handle = 'start';
+
+                const rightHandle = document.createElement('div');
+                rightHandle.className = 'drag-handle right';
+                rightHandle.dataset.handle = 'end';
+
+                block.appendChild(leftHandle);
+                block.appendChild(rightHandle);
+
+                // Events
+                block.addEventListener('mousedown', (e) => onBlockMouseDown(e, index));
+                block.addEventListener('click', (e) => {
+                    if (!isDragging) {
+                        selectLine(index);
+                    }
+                });
+
+                tracks.appendChild(block);
+            });
+
+            // Click on timeline to seek
+            tracks.addEventListener('click', (e) => {
+                if (e.target === tracks) {
+                    const rect = tracks.getBoundingClientRect();
+                    const x = e.clientX - rect.left + document.getElementById('timeline-wrapper').scrollLeft;
+                    const time = x / zoom;
+                    seekTo(time);
+                }
+            });
+        }
+
+        // Block dragging
+        function onBlockMouseDown(e, index) {
+            e.preventDefault();
+            const handle = e.target.dataset.handle;
+
+            isDragging = true;
+            dragInfo = {
+                index: index,
+                handle: handle || 'move', // 'start', 'end', or 'move'
+                startX: e.clientX,
+                originalStart: lyrics[index].start,
+                originalEnd: lyrics[index].end
+            };
+
+            document.addEventListener('mousemove', onBlockMouseMove);
+            document.addEventListener('mouseup', onBlockMouseUp);
+        }
+
+        function onBlockMouseMove(e) {
+            if (!isDragging || !dragInfo) return;
+
+            const deltaX = e.clientX - dragInfo.startX;
+            const deltaTime = deltaX / zoom;
+            const lyric = lyrics[dragInfo.index];
+
+            if (dragInfo.handle === 'start') {
+                lyric.start = Math.max(0, Math.min(dragInfo.originalStart + deltaTime, lyric.end - 0.5));
+            } else if (dragInfo.handle === 'end') {
+                lyric.end = Math.max(lyric.start + 0.5, dragInfo.originalEnd + deltaTime);
+            } else {
+                // Move whole block
+                const newStart = Math.max(0, dragInfo.originalStart + deltaTime);
+                const duration = dragInfo.originalEnd - dragInfo.originalStart;
+                lyric.start = newStart;
+                lyric.end = newStart + duration;
+            }
+
+            renderTimeline();
+            renderLyricsList();
+        }
+
+        function onBlockMouseUp() {
+            isDragging = false;
+            dragInfo = null;
+            document.removeEventListener('mousemove', onBlockMouseMove);
+            document.removeEventListener('mouseup', onBlockMouseUp);
+        }
+
+        // Render lyrics list
+        function renderLyricsList() {
+            const container = document.getElementById('lyrics-list');
+
+            container.innerHTML = lyrics.map((lyric, index) => `
+                <div class="lyric-row ${index === selectedLineIndex ? 'selected' : ''}" data-index="${index}" onclick="selectLine(${index})">
+                    <span class="line-num">${index + 1}</span>
+                    <input type="text" class="time-input" value="${formatTimeMs(lyric.start)}"
+                           onchange="updateTime(${index}, 'start', this.value)" onclick="event.stopPropagation()">
+                    <input type="text" class="time-input" value="${formatTimeMs(lyric.end)}"
+                           onchange="updateTime(${index}, 'end', this.value)" onclick="event.stopPropagation()">
+                    <input type="text" class="lyric-text-input" value="${escapeHtml(lyric.text)}"
+                           onchange="updateText(${index}, this.value)" onclick="event.stopPropagation()">
+                    <div class="row-actions">
+                        <button class="row-btn play" onclick="event.stopPropagation(); playLine(${index})" title="Play">&#9654;</button>
+                        <button class="row-btn" onclick="event.stopPropagation(); splitLine(${index})" title="Split">&#9986;</button>
+                        <button class="row-btn" onclick="event.stopPropagation(); deleteLine(${index})" title="Delete">&#128465;</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Select line
+        function selectLine(index) {
+            selectedLineIndex = index;
+            renderTimeline();
+            renderLyricsList();
+
+            // Scroll to selected in list
+            const row = document.querySelector(`.lyric-row[data-index="${index}"]`);
+            if (row) {
+                row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        // Update time from input
+        function updateTime(index, field, value) {
+            const time = parseTime(value);
+            lyrics[index][field] = time;
+            renderTimeline();
+        }
+
+        // Update text
+        function updateText(index, value) {
+            lyrics[index].text = value;
+            renderTimeline();
+        }
+
+        // Play specific line
+        function playLine(index) {
+            const lyric = lyrics[index];
+            seekTo(lyric.start);
+            player.playVideo();
+
+            // Stop at end
+            const checkEnd = setInterval(() => {
+                if (player.getCurrentTime() >= lyric.end) {
+                    player.pauseVideo();
+                    clearInterval(checkEnd);
+                }
+            }, 100);
+        }
+
+        // Split line at playhead
+        function splitLine(index) {
+            const lyric = lyrics[index];
+            const splitTime = player.getCurrentTime();
+
+            if (splitTime <= lyric.start || splitTime >= lyric.end) {
+                // Use midpoint if playhead not in range
+                const mid = (lyric.start + lyric.end) / 2;
+                doSplit(index, mid);
+            } else {
+                doSplit(index, splitTime);
+            }
+        }
+
+        function doSplit(index, splitTime) {
+            const lyric = lyrics[index];
+            const words = lyric.text.split(' ');
+            const midWord = Math.ceil(words.length / 2);
+
+            const newLines = [
+                {
+                    id: Date.now(),
+                    text: words.slice(0, midWord).join(' '),
+                    start: lyric.start,
+                    end: splitTime,
+                    section: lyric.section
+                },
+                {
+                    id: Date.now() + 1,
+                    text: words.slice(midWord).join(' '),
+                    start: splitTime,
+                    end: lyric.end,
+                    section: lyric.section
+                }
+            ];
+
+            lyrics.splice(index, 1, ...newLines);
+            renderTimeline();
+            renderLyricsList();
+        }
+
+        // Delete line
+        function deleteLine(index) {
+            if (confirm('Delete this line?')) {
+                lyrics.splice(index, 1);
+                if (selectedLineIndex >= lyrics.length) {
+                    selectedLineIndex = lyrics.length - 1;
+                }
+                renderTimeline();
+                renderLyricsList();
+            }
+        }
+
+        // Add new line at playhead
+        function addLine() {
+            const currentTime = player.getCurrentTime();
+            const newLine = {
+                id: Date.now(),
+                text: 'New line',
+                start: currentTime,
+                end: currentTime + 3,
+                section: 'verse'
+            };
+
+            // Insert in sorted position
+            let insertIndex = lyrics.findIndex(l => l.start > currentTime);
+            if (insertIndex === -1) insertIndex = lyrics.length;
+
+            lyrics.splice(insertIndex, 0, newLine);
+            selectedLineIndex = insertIndex;
+            renderTimeline();
+            renderLyricsList();
+        }
+
+        // Merge selected (current + next)
+        function mergeSelected() {
+            if (selectedLineIndex < 0 || selectedLineIndex >= lyrics.length - 1) {
+                alert('Select a line to merge with the next one');
+                return;
+            }
+
+            const line1 = lyrics[selectedLineIndex];
+            const line2 = lyrics[selectedLineIndex + 1];
+
+            const merged = {
+                id: Date.now(),
+                text: line1.text + ' ' + line2.text,
+                start: line1.start,
+                end: line2.end,
+                section: line1.section
+            };
+
+            lyrics.splice(selectedLineIndex, 2, merged);
+            renderTimeline();
+            renderLyricsList();
+        }
+
+        // Bulk offset
+        function applyBulkOffset() {
+            const offset = parseFloat(document.getElementById('bulk-offset').value) || 0;
+            lyrics.forEach(l => {
+                l.start = Math.max(0, l.start + offset);
+                l.end = Math.max(l.start + 0.1, l.end + offset);
+            });
+            document.getElementById('bulk-offset').value = '0';
+            renderTimeline();
+            renderLyricsList();
+        }
+
+        // Tool functions
+        function setStartAtPlayhead() {
+            if (selectedLineIndex < 0) {
+                alert('Select a line first');
+                return;
+            }
+            const time = player.getCurrentTime();
+            lyrics[selectedLineIndex].start = time;
+            if (lyrics[selectedLineIndex].end <= time) {
+                lyrics[selectedLineIndex].end = time + 1;
+            }
+            renderTimeline();
+            renderLyricsList();
+        }
+
+        function setEndAtPlayhead() {
+            if (selectedLineIndex < 0) {
+                alert('Select a line first');
+                return;
+            }
+            const time = player.getCurrentTime();
+            if (time > lyrics[selectedLineIndex].start) {
+                lyrics[selectedLineIndex].end = time;
+                renderTimeline();
+                renderLyricsList();
+            }
+        }
+
+        function splitAtPlayhead() {
+            if (selectedLineIndex < 0) {
+                alert('Select a line first');
+                return;
+            }
+            const time = player.getCurrentTime();
+            const lyric = lyrics[selectedLineIndex];
+            if (time > lyric.start && time < lyric.end) {
+                doSplit(selectedLineIndex, time);
+            } else {
+                alert('Playhead must be within the selected line');
+            }
+        }
+
+        function selectAll() {
+            // Toggle multi-select (simplified: just select first)
+            selectedLineIndex = 0;
+            renderTimeline();
+            renderLyricsList();
+        }
+
+        function deleteSelected() {
+            if (selectedLineIndex >= 0) {
+                deleteLine(selectedLineIndex);
+            }
+        }
+
+        function autoAlignGaps() {
+            // Fill gaps between lines
+            for (let i = 0; i < lyrics.length - 1; i++) {
+                const gap = lyrics[i + 1].start - lyrics[i].end;
+                if (gap > 0) {
+                    lyrics[i].end = lyrics[i + 1].start;
+                }
+            }
+            renderTimeline();
+            renderLyricsList();
+        }
+
+        function resetToOriginal() {
+            if (confirm('Reset all timestamps to original values?')) {
+                lyrics = JSON.parse(JSON.stringify(originalLyrics));
+                selectedLineIndex = -1;
+                renderTimeline();
+                renderLyricsList();
+            }
+        }
+
+        // Save changes
+        async function saveChanges() {
+            const saveBtn = document.getElementById('save-btn');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+
+            try {
+                const segments = lyrics.map(l => ({
+                    text: l.text,
+                    start: l.start,
+                    end: l.end,
+                    section: l.section
+                }));
+
+                const response = await fetch(`/api/admin/song/${videoId}/timestamps`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Password': adminPassword
+                    },
+                    body: JSON.stringify({ segments })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                alert('Changes saved successfully!');
+                originalLyrics = JSON.parse(JSON.stringify(lyrics));
+
+            } catch (error) {
+                alert('Error saving: ' + error.message);
+            }
+
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save Changes';
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Don't capture if typing in input
+            if (e.target.tagName === 'INPUT') return;
+
+            switch (e.code) {
+                case 'Space':
+                    e.preventDefault();
+                    togglePlayPause();
+                    break;
+
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    seekRelative(e.shiftKey ? -0.1 : -1);
+                    break;
+
+                case 'ArrowRight':
+                    e.preventDefault();
+                    seekRelative(e.shiftKey ? 0.1 : 1);
+                    break;
+
+                case 'ArrowUp':
+                    e.preventDefault();
+                    if (selectedLineIndex > 0) {
+                        selectLine(selectedLineIndex - 1);
+                    }
+                    break;
+
+                case 'ArrowDown':
+                    e.preventDefault();
+                    if (selectedLineIndex < lyrics.length - 1) {
+                        selectLine(selectedLineIndex + 1);
+                    }
+                    break;
+
+                case 'Enter':
+                    e.preventDefault();
+                    if (e.shiftKey) {
+                        setEndAtPlayhead();
+                    } else {
+                        setStartAtPlayhead();
+                    }
+                    break;
+
+                case 'KeyS':
+                    if (!e.ctrlKey && !e.metaKey) {
+                        e.preventDefault();
+                        splitAtPlayhead();
+                    }
+                    break;
+
+                case 'Delete':
+                case 'Backspace':
+                    if (selectedLineIndex >= 0) {
+                        e.preventDefault();
+                        deleteLine(selectedLineIndex);
+                    }
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>

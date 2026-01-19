@@ -1,4 +1,4 @@
-// Dance Card Generator - Main Application
+// Dance Card Generator - Main Application (Library-based)
 
 // State
 let player = null;
@@ -14,32 +14,55 @@ let currentSpeedIndex = 2;
 
 // Current song state
 let currentVideoId = null;
-let currentSongInfo = null;
-let currentChoreography = null;
-let isFromCache = false;
+let currentSongData = null;
+let currentLyricsSegments = null;
+let currentLyricIndex = -1;
+let currentSongSections = null;
+let currentSectionIndex = -1;
+
+// Beat counter state
+let beatCounterInterval = null;
+let currentBeat = 1;
+let estimatedBPM = 120;
+
+// Library state
+let songLibrary = [];
+let currentFilter = 'all';
+
+// API base URL
+const API_BASE = window.location.origin;
 
 // DOM Elements
 const screens = {
-    input: document.getElementById('input-screen'),
+    library: document.getElementById('library-screen'),
     loading: document.getElementById('loading-screen'),
     dance: document.getElementById('dance-screen'),
     complete: document.getElementById('complete-screen')
 };
 
 const elements = {
-    youtubeUrl: document.getElementById('youtube-url'),
-    generateBtn: document.getElementById('generate-btn'),
-    apiKey: document.getElementById('api-key'),
-    toggleApiKey: document.getElementById('toggle-api-key'),
-    apiKeyContainer: document.getElementById('api-key-container'),
-    errorMessage: document.getElementById('error-message'),
+    // Library elements
+    songLibrary: document.getElementById('song-library'),
+    emptyLibrary: document.getElementById('empty-library'),
+    filterBtns: document.querySelectorAll('.filter-btn'),
+    requestSongBtn: document.getElementById('request-song-btn'),
+
+    // Request modal elements
+    requestModal: document.getElementById('request-modal'),
+    closeRequestModal: document.getElementById('close-request-modal'),
+    requestForm: document.getElementById('request-form'),
+    requestUrl: document.getElementById('request-url'),
+    requestNote: document.getElementById('request-note'),
+    requestSuccess: document.getElementById('request-success'),
+
+    // Loading elements
     loadingText: document.getElementById('loading-text'),
+
+    // Dance screen elements
     backBtn: document.getElementById('back-btn'),
     songTitle: document.getElementById('song-title'),
     songArtist: document.getElementById('song-artist'),
     songVibe: document.getElementById('song-vibe'),
-    savedBadge: document.getElementById('saved-badge'),
-    regenerateBtn: document.getElementById('regenerate-btn'),
     playPauseBtn: document.getElementById('play-pause-btn'),
     progressBar: document.getElementById('progress-bar'),
     progressFill: document.getElementById('progress-fill'),
@@ -47,6 +70,8 @@ const elements = {
     timeDisplay: document.getElementById('time-display'),
     speedBtn: document.getElementById('speed-btn'),
     contextualMessage: document.getElementById('contextual-message'),
+
+    // Card elements
     currentPictogram: document.getElementById('current-pictogram'),
     currentMoveName: document.getElementById('current-move-name'),
     currentBodyPart: document.getElementById('current-body-part'),
@@ -54,12 +79,26 @@ const elements = {
     nextPictogram: document.getElementById('next-pictogram'),
     nextMoveName: document.getElementById('next-move-name'),
     moveDots: document.getElementById('move-dots'),
+
+    // Beat counter elements
+    beatDots: document.getElementById('beat-dots'),
+    beatNumber: document.getElementById('beat-number'),
+
+    // Lyrics display elements
+    currentLyric: document.getElementById('current-lyric'),
+    nextLyric: document.getElementById('next-lyric'),
+
+    // Section indicator elements
+    sectionIndicator: document.getElementById('section-indicator'),
+    sectionIcon: document.getElementById('section-icon'),
+    sectionName: document.getElementById('section-name'),
+
+    // Complete screen elements
     replayBtn: document.getElementById('replay-btn'),
     newSongBtn: document.getElementById('new-song-btn'),
-    // Lyrics elements
-    lyricsSection: document.querySelector('.lyrics-section'),
-    toggleLyricsBtn: document.getElementById('toggle-lyrics-btn'),
-    lyricsContent: document.getElementById('lyrics-content')
+    totalMoves: document.getElementById('total-moves'),
+    songDuration: document.getElementById('song-duration'),
+    completeSongInfo: document.getElementById('complete-song-info')
 };
 
 // Initialize YouTube API
@@ -75,187 +114,237 @@ window.onYouTubeIframeAPIReady = function() {
     playerReady = true;
 };
 
-// Extract video ID from YouTube URL
-function extractVideoId(url) {
-    const patterns = [
-        /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([^&\n?#]+)/,
-        /^([a-zA-Z0-9_-]{11})$/
-    ];
+// ============ LIBRARY FUNCTIONS ============
 
-    for (const pattern of patterns) {
-        const match = url.match(pattern);
-        if (match) return match[1];
-    }
-    return null;
-}
-
-// Fetch video info using YouTube oEmbed API
-async function fetchVideoInfo(videoId) {
+// Load song library from server
+async function loadLibrary() {
     try {
-        const response = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
-        if (!response.ok) throw new Error('Video not found');
-        const data = await response.json();
+        const response = await fetch(`${API_BASE}/api/songs`);
+        if (!response.ok) throw new Error('Failed to load library');
 
-        // Parse title to extract song and artist
-        let title = data.title;
-        let artist = data.author_name;
-
-        // Common patterns: "Artist - Song", "Song - Artist", "Song (Official Video)"
-        const dashMatch = title.match(/^(.+?)\s*[-–—]\s*(.+?)(?:\s*[\(\[].*)?$/);
-        if (dashMatch) {
-            // Check which part is more likely the artist
-            if (dashMatch[1].toLowerCase().includes('official') ||
-                dashMatch[1].toLowerCase().includes('lyric') ||
-                dashMatch[1].toLowerCase().includes('video')) {
-                title = dashMatch[2];
-            } else {
-                artist = dashMatch[1];
-                title = dashMatch[2].replace(/\s*[\(\[].*$/, ''); // Remove (Official Video) etc
-            }
-        }
-
-        // Clean up title
-        title = title.replace(/\s*[\(\[](?:official|lyric|music|video|audio|hd|4k|remaster).*[\)\]]/gi, '').trim();
-
-        return { title, artist, fullTitle: data.title };
+        songLibrary = await response.json();
+        renderLibrary();
     } catch (error) {
-        console.error('Error fetching video info:', error);
-        return { title: 'Unknown Song', artist: 'Unknown Artist', fullTitle: '' };
+        console.error('Error loading library:', error);
+        elements.songLibrary.innerHTML = `
+            <div class="library-error">
+                <p>Could not load songs.</p>
+                <p class="hint">Make sure the server is running: <code>python server.py</code></p>
+            </div>
+        `;
     }
 }
 
-// Generate choreography using Claude API
-async function generateChoreography(songInfo, apiKey) {
-    const prompt = `You are a dance choreographer creating a beginner-friendly dance routine for the song "${songInfo.title}" by ${songInfo.artist}.
+// Render song library grid
+function renderLibrary() {
+    const filtered = currentFilter === 'all'
+        ? songLibrary
+        : songLibrary.filter(song => song.difficulty === parseInt(currentFilter));
 
-Create a sequence of 10-12 dance moves that would fit this song. Consider the likely tempo, energy, and vibe of the song based on its title and artist.
-
-Available moves (use ONLY these exact move IDs):
-- step_touch: Step Touch (Easy, Legs)
-- body_roll: Body Roll (Medium, Full Body)
-- arm_wave: Arm Wave (Medium, Arms)
-- hip_sway: Hip Sway (Easy, Hips)
-- clap: Clap (Easy, Arms)
-- turn: Turn (Medium, Full Body)
-- jump: Jump (Medium, Full Body)
-- slide: Slide (Easy, Legs)
-- shoulder_pop: Shoulder Pop (Easy, Arms)
-- snap: Snap (Easy, Arms)
-- point: Point (Easy, Arms)
-- stomp: Stomp (Easy, Legs)
-- groove: Groove (Easy, Full Body)
-- sway: Sway (Easy, Full Body)
-- punch: Punch (Medium, Arms)
-- shimmy: Shimmy (Medium, Arms)
-- twist: Twist (Easy, Hips)
-
-Return a JSON object with this exact structure:
-{
-  "songVibe": "one of: energetic, chill, emotional, fun, intense",
-  "estimatedBPM": number between 60-180,
-  "moves": [
-    {
-      "moveId": "exact move ID from list above",
-      "beats": 4 or 8,
-      "startTime": time in seconds when this move starts (spread evenly across a 3-minute song, or adjust if you know the song length)
+    if (filtered.length === 0) {
+        elements.songLibrary.classList.add('hidden');
+        elements.emptyLibrary.classList.remove('hidden');
+        return;
     }
-  ]
+
+    elements.songLibrary.classList.remove('hidden');
+    elements.emptyLibrary.classList.add('hidden');
+
+    elements.songLibrary.innerHTML = filtered.map(song => `
+        <div class="song-card" data-video-id="${song.video_id}">
+            <div class="song-thumbnail">
+                ${song.thumbnail_url
+                    ? `<img src="${song.thumbnail_url}" alt="${song.title}">`
+                    : `<div class="placeholder-thumbnail"></div>`
+                }
+                <div class="difficulty-badge difficulty-${song.difficulty}">
+                    ${getDifficultyLabel(song.difficulty)}
+                </div>
+            </div>
+            <div class="song-card-info">
+                <h3 class="song-card-title">${escapeHtml(song.title)}</h3>
+                <p class="song-card-artist">${escapeHtml(song.artist)}</p>
+                ${song.genre ? `<span class="song-card-genre">${escapeHtml(song.genre)}</span>` : ''}
+            </div>
+        </div>
+    `).join('');
+
+    // Add click handlers to song cards
+    elements.songLibrary.querySelectorAll('.song-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const videoId = card.dataset.videoId;
+            loadSong(videoId);
+        });
+    });
 }
 
-Rules:
-1. Start with simpler moves (step_touch, sway, groove) to warm up
-2. Build energy through the middle with more dynamic moves
-3. Match move intensity to likely song sections (verse=simpler, chorus=bigger moves)
-4. End with memorable moves
-5. Vary the body parts used - don't do too many arm moves in a row
-6. For slower songs, use more sway, groove, body_roll, arm_wave
-7. For faster songs, use more jump, stomp, clap, punch
-8. Space moves evenly, assuming ~3 minute song if unknown
+// Get difficulty label
+function getDifficultyLabel(difficulty) {
+    const labels = { 1: 'Easy', 2: 'Medium', 3: 'Hard' };
+    return labels[difficulty] || 'Medium';
+}
 
-Return ONLY the JSON object, no other text.`;
+// Filter library
+function filterLibrary(filter) {
+    currentFilter = filter;
+
+    // Update active button
+    elements.filterBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.filter === filter);
+    });
+
+    renderLibrary();
+}
+
+// ============ SONG REQUEST FUNCTIONS ============
+
+// Show request modal
+function showRequestModal() {
+    elements.requestModal.classList.remove('hidden');
+    elements.requestForm.classList.remove('hidden');
+    elements.requestSuccess.classList.add('hidden');
+    elements.requestUrl.value = '';
+    elements.requestNote.value = '';
+}
+
+// Hide request modal
+function hideRequestModal() {
+    elements.requestModal.classList.add('hidden');
+}
+
+// Submit song request
+async function submitRequest(event) {
+    event.preventDefault();
+
+    const url = elements.requestUrl.value.trim();
+    const note = elements.requestNote.value.trim();
+
+    if (!url) return;
 
     try {
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
+        const response = await fetch(`${API_BASE}/api/requests`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': apiKey,
-                'anthropic-version': '2023-06-01',
-                'anthropic-dangerous-direct-browser-access': 'true'
-            },
-            body: JSON.stringify({
-                model: 'claude-sonnet-4-20250514',
-                max_tokens: 1024,
-                messages: [{
-                    role: 'user',
-                    content: prompt
-                }]
-            })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ youtube_url: url, user_note: note })
         });
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.error?.message || 'API request failed');
+            throw new Error(error.error || 'Request failed');
         }
 
-        const data = await response.json();
-        const content = data.content[0].text;
+        // Show success message
+        elements.requestForm.classList.add('hidden');
+        elements.requestSuccess.classList.remove('hidden');
 
-        // Parse JSON from response
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error('Invalid response format');
-
-        return JSON.parse(jsonMatch[0]);
+        // Close modal after delay
+        setTimeout(hideRequestModal, 2000);
     } catch (error) {
-        console.error('Error generating choreography:', error);
-        throw error;
+        console.error('Error submitting request:', error);
+        alert('Failed to submit request: ' + error.message);
     }
 }
 
-// Generate fallback choreography if API fails
-function generateFallbackChoreography() {
-    const vibes = ['energetic', 'fun', 'chill'];
-    const vibe = vibes[Math.floor(Math.random() * vibes.length)];
+// ============ SONG LOADING FUNCTIONS ============
 
-    const easyMoves = ['step_touch', 'hip_sway', 'clap', 'slide', 'snap', 'point', 'stomp', 'groove', 'sway', 'twist'];
-    const mediumMoves = ['body_roll', 'arm_wave', 'turn', 'jump', 'shoulder_pop', 'punch', 'shimmy'];
+// Load a song and its routine
+async function loadSong(videoId) {
+    showScreen('loading');
+    elements.loadingText.textContent = 'Loading your dance...';
 
-    const moves = [];
-    const numMoves = 10 + Math.floor(Math.random() * 3);
-    const duration = 180; // Assume 3 minutes
-    const interval = duration / numMoves;
+    try {
+        const response = await fetch(`${API_BASE}/api/songs/${videoId}`);
+        if (!response.ok) throw new Error('Song not found');
 
-    // Start easy
-    moves.push({
-        moveId: easyMoves[Math.floor(Math.random() * easyMoves.length)],
-        beats: 8,
-        startTime: 5
-    });
+        currentSongData = await response.json();
+        currentVideoId = videoId;
 
-    // Build routine
-    for (let i = 1; i < numMoves; i++) {
-        const progress = i / numMoves;
-        // More medium moves in the middle, easier at start/end
-        const useMedium = progress > 0.2 && progress < 0.8 && Math.random() > 0.4;
-        const movePool = useMedium ? mediumMoves : easyMoves;
+        // Parse lyrics segments
+        if (currentSongData.lyrics) {
+            currentLyricsSegments = currentSongData.lyrics.segments || null;
+        } else {
+            currentLyricsSegments = null;
+        }
 
-        moves.push({
-            moveId: movePool[Math.floor(Math.random() * movePool.length)],
-            beats: Math.random() > 0.5 ? 8 : 4,
-            startTime: Math.round(5 + i * interval)
-        });
+        // Parse song sections for section indicator
+        if (currentSongData.routine && currentSongData.routine.structure?.sections) {
+            currentSongSections = currentSongData.routine.structure.sections;
+        } else {
+            currentSongSections = null;
+        }
+        currentSectionIndex = -1;
+
+        // Build routine from stored choreography
+        if (currentSongData.routine && currentSongData.routine.moves) {
+            currentRoutine = buildRoutine(currentSongData.routine.moves);
+            estimatedBPM = currentSongData.routine.structure?.estimatedBPM || 120;
+        } else {
+            throw new Error('No choreography available for this song');
+        }
+
+        // Update UI with song info
+        elements.songTitle.textContent = currentSongData.song.title;
+        elements.songArtist.textContent = currentSongData.song.artist;
+
+        // Set vibe badge
+        const vibe = currentSongData.routine.structure?.songVibe || 'fun';
+        elements.songVibe.textContent = vibe.charAt(0).toUpperCase() + vibe.slice(1);
+
+        // Set initial contextual message
+        if (vibe === 'energetic' || vibe === 'fun') {
+            elements.contextualMessage.textContent = getRandomMessage('upbeat');
+        } else {
+            elements.contextualMessage.textContent = getRandomMessage('start');
+        }
+
+        elements.loadingText.textContent = 'Setting up video player...';
+
+        // Wait for YouTube API
+        if (!playerReady) {
+            await new Promise(resolve => {
+                const check = setInterval(() => {
+                    if (playerReady) {
+                        clearInterval(check);
+                        resolve();
+                    }
+                }, 100);
+            });
+        }
+
+        // Create player
+        await createPlayer(videoId);
+
+        // Adjust move timestamps if needed
+        const expectedDuration = currentSongData.song.duration || 180;
+        if (Math.abs(videoDuration - expectedDuration) > 30) {
+            const ratio = videoDuration / expectedDuration;
+            currentRoutine.forEach(move => {
+                move.startTime = Math.min(move.startTime * ratio, videoDuration - 10);
+            });
+        }
+
+        // Initialize display
+        currentMoveIndex = 0;
+        currentLyricIndex = -1;
+        displayCurrentMove();
+        renderMoveMarkers();
+        initBeatCounter();
+        elements.progressFill.style.width = '0%';
+        elements.timeDisplay.textContent = `0:00 / ${formatTime(videoDuration)}`;
+
+        // Show dance screen
+        showScreen('dance');
+
+    } catch (error) {
+        console.error('Error loading song:', error);
+        alert('Failed to load song: ' + error.message);
+        showScreen('library');
     }
-
-    return {
-        songVibe: vibe,
-        estimatedBPM: 100 + Math.floor(Math.random() * 40),
-        moves
-    };
 }
 
 // Build routine from choreography data
-function buildRoutine(choreography) {
-    return choreography.moves.map((move, index) => {
+function buildRoutine(moves) {
+    return moves.map((move, index) => {
         const moveData = MOVE_CATALOG[move.moveId];
         if (!moveData) {
             console.warn(`Unknown move: ${move.moveId}, using step_touch`);
@@ -276,6 +365,8 @@ function buildRoutine(choreography) {
         };
     });
 }
+
+// ============ YOUTUBE PLAYER FUNCTIONS ============
 
 // Create YouTube player
 function createPlayer(videoId) {
@@ -311,15 +402,18 @@ function onPlayerStateChange(event) {
         isPlaying = true;
         updatePlayButton();
         startUpdateLoop();
+        startBeatCounter();
     } else if (event.data === YT.PlayerState.PAUSED) {
         isPlaying = false;
         updatePlayButton();
         stopUpdateLoop();
+        stopBeatCounter();
     } else if (event.data === YT.PlayerState.ENDED) {
         isPlaying = false;
         updatePlayButton();
         stopUpdateLoop();
-        showScreen('complete');
+        stopBeatCounter();
+        showCompleteScreen();
     }
 }
 
@@ -337,7 +431,8 @@ function updatePlayButton() {
     }
 }
 
-// Start update loop for progress and card sync
+// ============ UPDATE LOOP FUNCTIONS ============
+
 function startUpdateLoop() {
     stopUpdateLoop();
     updateInterval = setInterval(updateProgress, 100);
@@ -350,7 +445,7 @@ function stopUpdateLoop() {
     }
 }
 
-// Update progress bar and sync cards
+// Update progress bar and sync cards/lyrics
 function updateProgress() {
     if (!player || !isPlaying) return;
 
@@ -366,6 +461,9 @@ function updateProgress() {
 
     // Sync lyrics with current time
     syncLyrics(currentTime);
+
+    // Sync section indicator
+    syncSection(currentTime);
 }
 
 // Format time as M:SS
@@ -374,6 +472,8 @@ function formatTime(seconds) {
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
+
+// ============ MOVE DISPLAY FUNCTIONS ============
 
 // Update current move card
 function updateCurrentMove(currentTime) {
@@ -391,6 +491,7 @@ function updateCurrentMove(currentTime) {
         currentMoveIndex = newMoveIndex;
         displayCurrentMove();
         updateContextualMessage();
+        resetBeatCounter();
     }
 }
 
@@ -406,6 +507,9 @@ function displayCurrentMove() {
     elements.currentMoveName.textContent = current.name;
     elements.currentBodyPart.textContent = current.bodyPart;
     elements.currentBeats.textContent = `${current.beats} counts`;
+
+    // Update beat dots for this move
+    updateBeatDots(current.beats);
 
     // Trigger animation
     const currentCard = document.getElementById('current-card');
@@ -463,291 +567,245 @@ function renderMoveMarkers() {
     }).join('');
 }
 
+// ============ BEAT COUNTER FUNCTIONS ============
+
+// Initialize beat counter
+function initBeatCounter() {
+    const current = currentRoutine[0];
+    if (current) {
+        updateBeatDots(current.beats);
+    }
+    currentBeat = 1;
+    elements.beatNumber.textContent = '1';
+}
+
+// Update beat dots for current move
+function updateBeatDots(beats) {
+    elements.beatDots.innerHTML = Array(beats).fill(0).map((_, i) =>
+        `<div class="beat-dot ${i === 0 ? 'active' : ''}"></div>`
+    ).join('');
+}
+
+// Start beat counter
+function startBeatCounter() {
+    stopBeatCounter();
+    const beatInterval = (60 / estimatedBPM) * 1000; // ms per beat
+
+    beatCounterInterval = setInterval(() => {
+        const current = currentRoutine[currentMoveIndex];
+        if (!current) return;
+
+        currentBeat = currentBeat >= current.beats ? 1 : currentBeat + 1;
+        elements.beatNumber.textContent = currentBeat.toString();
+
+        // Update beat dots
+        const dots = elements.beatDots.querySelectorAll('.beat-dot');
+        dots.forEach((dot, i) => {
+            dot.classList.toggle('active', i < currentBeat);
+        });
+    }, beatInterval);
+}
+
+// Stop beat counter
+function stopBeatCounter() {
+    if (beatCounterInterval) {
+        clearInterval(beatCounterInterval);
+        beatCounterInterval = null;
+    }
+}
+
+// Reset beat counter when move changes
+function resetBeatCounter() {
+    currentBeat = 1;
+    elements.beatNumber.textContent = '1';
+
+    const current = currentRoutine[currentMoveIndex];
+    if (current) {
+        updateBeatDots(current.beats);
+    }
+
+    // Restart counter if playing
+    if (isPlaying) {
+        startBeatCounter();
+    }
+}
+
+// ============ LYRICS SYNC FUNCTIONS ============
+
+// Sync lyrics display with current playback time
+function syncLyrics(currentTime) {
+    if (!currentLyricsSegments || currentLyricsSegments.length === 0) {
+        elements.currentLyric.textContent = '🎵 Instrumental...';
+        elements.currentLyric.classList.add('instrumental');
+        elements.nextLyric.textContent = '';
+        return;
+    }
+
+    // Find the current and next segment
+    let currentSegment = null;
+    let nextSegment = null;
+    let isInstrumental = false;
+    let gapDuration = 0;
+
+    const firstLyricTime = currentLyricsSegments[0].start;
+    const lastLyricTime = currentLyricsSegments[currentLyricsSegments.length - 1].end;
+
+    // Before any lyrics start (intro)
+    if (currentTime < firstLyricTime) {
+        isInstrumental = true;
+        gapDuration = firstLyricTime - currentTime;
+        nextSegment = currentLyricsSegments[0];
+    }
+    // After all lyrics end (outro)
+    else if (currentTime > lastLyricTime) {
+        isInstrumental = true;
+        gapDuration = videoDuration - lastLyricTime;
+    }
+    else {
+        // Find current segment or gap
+        for (let i = 0; i < currentLyricsSegments.length; i++) {
+            const segment = currentLyricsSegments[i];
+
+            if (currentTime >= segment.start && currentTime < segment.end) {
+                currentSegment = segment;
+                nextSegment = currentLyricsSegments[i + 1] || null;
+                break;
+            }
+
+            // Check if we're in a gap between segments
+            if (i < currentLyricsSegments.length - 1) {
+                const nextSeg = currentLyricsSegments[i + 1];
+                if (currentTime >= segment.end && currentTime < nextSeg.start) {
+                    gapDuration = nextSeg.start - segment.end;
+                    // Only show instrumental for gaps > 5 seconds
+                    if (gapDuration > 5) {
+                        isInstrumental = true;
+                    }
+                    nextSegment = nextSeg;
+                    break;
+                }
+            }
+        }
+    }
+
+    // Update display
+    if (isInstrumental && gapDuration > 5) {
+        elements.currentLyric.textContent = '🎵 Instrumental...';
+        elements.currentLyric.classList.add('instrumental');
+        elements.currentLyric.classList.remove('active');
+    } else if (currentSegment) {
+        elements.currentLyric.textContent = currentSegment.text;
+        elements.currentLyric.classList.add('active');
+        elements.currentLyric.classList.remove('instrumental');
+    } else {
+        elements.currentLyric.textContent = '';
+        elements.currentLyric.classList.remove('active', 'instrumental');
+    }
+
+    if (nextSegment) {
+        elements.nextLyric.textContent = nextSegment.text;
+    } else {
+        elements.nextLyric.textContent = '';
+    }
+}
+
+// ============ SECTION INDICATOR ============
+
+// Get icon for section type
+function getSectionIcon(sectionType) {
+    const icons = {
+        'intro': '🎬',
+        'verse': '📝',
+        'pre-chorus': '⚡',
+        'chorus': '🎤',
+        'bridge': '🌉',
+        'outro': '🎬',
+        'instrumental': '🎵'
+    };
+    return icons[sectionType] || '🎵';
+}
+
+// Sync section indicator with current playback time
+function syncSection(currentTime) {
+    if (!elements.sectionIndicator) return;
+
+    // Check if we're in an instrumental section (no lyrics)
+    let isInstrumental = false;
+
+    if (currentLyricsSegments && currentLyricsSegments.length > 0) {
+        const firstLyric = currentLyricsSegments[0].start;
+        const lastLyric = currentLyricsSegments[currentLyricsSegments.length - 1].end;
+
+        if (currentTime < firstLyric - 2 || currentTime > lastLyric + 2) {
+            isInstrumental = true;
+        }
+    }
+
+    // If we have song sections, find the current one
+    if (currentSongSections && currentSongSections.length > 0) {
+        let newSectionIndex = -1;
+
+        for (let i = 0; i < currentSongSections.length; i++) {
+            const section = currentSongSections[i];
+            if (currentTime >= section.start && currentTime < section.end) {
+                newSectionIndex = i;
+                break;
+            }
+        }
+
+        // Update display if section changed
+        if (newSectionIndex !== currentSectionIndex) {
+            currentSectionIndex = newSectionIndex;
+
+            if (newSectionIndex >= 0) {
+                const section = currentSongSections[newSectionIndex];
+                const sectionType = section.type || 'verse';
+                const sectionLabel = section.label || sectionType.toUpperCase();
+
+                elements.sectionIcon.textContent = getSectionIcon(sectionType);
+                elements.sectionName.textContent = sectionLabel;
+
+                // Update indicator styling
+                elements.sectionIndicator.className = 'section-indicator ' + sectionType;
+            } else if (isInstrumental) {
+                elements.sectionIcon.textContent = '🎵';
+                elements.sectionName.textContent = 'INSTRUMENTAL';
+                elements.sectionIndicator.className = 'section-indicator instrumental';
+            }
+        }
+    } else if (isInstrumental) {
+        // No sections data but instrumental
+        elements.sectionIcon.textContent = '🎵';
+        elements.sectionName.textContent = 'INSTRUMENTAL';
+        elements.sectionIndicator.className = 'section-indicator instrumental';
+    } else {
+        // No sections data, hide or show generic
+        elements.sectionIndicator.className = 'section-indicator';
+        elements.sectionIcon.textContent = '🎵';
+        elements.sectionName.textContent = '';
+    }
+}
+
+// ============ SCREEN NAVIGATION ============
+
 // Show a specific screen
 function showScreen(screenName) {
-    Object.values(screens).forEach(screen => screen.classList.remove('active'));
-    screens[screenName].classList.add('active');
-}
-
-// Show error message
-function showError(message) {
-    elements.errorMessage.textContent = message;
-    elements.errorMessage.classList.remove('hidden');
-    setTimeout(() => {
-        elements.errorMessage.classList.add('hidden');
-    }, 5000);
-}
-
-// Main generation flow
-async function handleGenerate(forceRegenerate = false) {
-    const url = elements.youtubeUrl.value.trim();
-    const apiKey = elements.apiKey.value.trim();
-
-    // Validate URL
-    const videoId = extractVideoId(url);
-    if (!videoId) {
-        showError('Please enter a valid YouTube URL');
-        return;
-    }
-
-    // Check API key (needed for regeneration or new songs)
-    if (!apiKey && !choreographyDB.has(videoId)) {
-        showError('Please enter your Claude API key in Settings');
-        elements.apiKeyContainer.classList.remove('hidden');
-        return;
-    }
-
-    // Save API key to localStorage
-    if (apiKey) {
-        localStorage.setItem('claude_api_key', apiKey);
-    }
-
-    // Store current video ID
-    currentVideoId = videoId;
-
-    // Show loading screen
-    showScreen('loading');
-    elements.loadingText.textContent = 'Fetching song info...';
-
-    try {
-        // Check database for cached choreography (unless forcing regeneration)
-        const cached = !forceRegenerate && choreographyDB.get(videoId);
-
-        if (cached) {
-            // Use cached data
-            console.log('Using cached choreography for:', videoId);
-            isFromCache = true;
-            currentSongInfo = { title: cached.title, artist: cached.artist };
-            currentChoreography = cached.choreography;
-
-            elements.loadingText.textContent = 'Loading your saved routine...';
-
-            // Display lyrics if cached
-            if (cached.lyrics && cached.lyrics.segments) {
-                displayLyrics(cached.lyrics);
-            } else {
-                // Transcribe lyrics in background
-                fetchAndDisplayLyrics(videoId);
-            }
-        } else {
-            // Fetch fresh data
-            isFromCache = false;
-
-            // Get video info
-            currentSongInfo = await fetchVideoInfo(videoId);
-            elements.loadingText.textContent = 'Creating your dance routine...';
-
-            // Generate choreography
-            try {
-                currentChoreography = await generateChoreography(currentSongInfo, apiKey);
-            } catch (error) {
-                console.warn('API failed, using fallback:', error);
-                currentChoreography = generateFallbackChoreography();
-            }
-
-            // Save to database
-            choreographyDB.save(videoId, {
-                title: currentSongInfo.title,
-                artist: currentSongInfo.artist,
-                choreography: currentChoreography
-            });
-
-            // Transcribe lyrics in background
-            fetchAndDisplayLyrics(videoId);
-        }
-
-        // Build routine
-        currentRoutine = buildRoutine(currentChoreography);
-
-        // Update UI with song info
-        elements.songTitle.textContent = currentSongInfo.title;
-        elements.songArtist.textContent = currentSongInfo.artist;
-        elements.songVibe.textContent = currentChoreography.songVibe.charAt(0).toUpperCase() + currentChoreography.songVibe.slice(1);
-
-        // Show/hide saved badge
-        if (isFromCache) {
-            elements.savedBadge.classList.remove('hidden');
-        } else {
-            elements.savedBadge.classList.add('hidden');
-        }
-
-        // Set initial contextual message based on vibe
-        if (currentChoreography.songVibe === 'energetic' || currentChoreography.songVibe === 'fun') {
-            elements.contextualMessage.textContent = getRandomMessage('upbeat');
-        } else {
-            elements.contextualMessage.textContent = getRandomMessage('start');
-        }
-
-        elements.loadingText.textContent = 'Setting up video player...';
-
-        // Wait for YouTube API
-        if (!playerReady) {
-            await new Promise(resolve => {
-                const check = setInterval(() => {
-                    if (playerReady) {
-                        clearInterval(check);
-                        resolve();
-                    }
-                }, 100);
-            });
-        }
-
-        // Create player
-        await createPlayer(videoId);
-
-        // Adjust move timestamps if video is shorter/longer than expected
-        const expectedDuration = 180;
-        if (Math.abs(videoDuration - expectedDuration) > 30) {
-            const ratio = videoDuration / expectedDuration;
-            currentRoutine.forEach(move => {
-                move.startTime = Math.min(move.startTime * ratio, videoDuration - 10);
-            });
-        }
-
-        // Initialize display
-        currentMoveIndex = 0;
-        displayCurrentMove();
-        renderMoveMarkers();
-        elements.progressFill.style.width = '0%';
-        elements.timeDisplay.textContent = `0:00 / ${formatTime(videoDuration)}`;
-
-        // Show dance screen
-        showScreen('dance');
-
-    } catch (error) {
-        console.error('Error:', error);
-        showError(error.message || 'Something went wrong. Please try again.');
-        showScreen('input');
+    Object.values(screens).forEach(screen => {
+        if (screen) screen.classList.remove('active');
+    });
+    if (screens[screenName]) {
+        screens[screenName].classList.add('active');
     }
 }
 
-// Handle regenerate button click
-async function handleRegenerate() {
-    const apiKey = elements.apiKey.value.trim() || localStorage.getItem('claude_api_key');
+// Show completion screen
+function showCompleteScreen() {
+    // Update stats
+    elements.totalMoves.textContent = currentRoutine.length.toString();
+    elements.songDuration.textContent = formatTime(videoDuration);
+    elements.completeSongInfo.textContent = `You completed "${currentSongData.song.title}"!`;
 
-    if (!apiKey) {
-        showError('Please enter your Claude API key in Settings to regenerate');
-        showScreen('input');
-        elements.apiKeyContainer.classList.remove('hidden');
-        return;
-    }
-
-    // Delete the cached version
-    if (currentVideoId) {
-        choreographyDB.delete(currentVideoId);
-    }
-
-    // Regenerate with force flag
-    await handleGenerate(true);
-}
-
-// Current lyrics data for syncing
-let currentLyricsData = null;
-let currentLyricIndex = -1;
-
-// Fetch and display lyrics using Whisper transcription
-async function fetchAndDisplayLyrics(videoId) {
-    // Show loading state
-    elements.lyricsContent.innerHTML = '<p class="lyrics-placeholder">Transcribing audio with Whisper...</p>';
-
-    try {
-        const lyricsData = await LyricsService.fetch(videoId);
-
-        if (lyricsData && lyricsData.segments) {
-            // Store for syncing
-            currentLyricsData = lyricsData;
-            currentLyricIndex = -1;
-
-            // Update database with lyrics data
-            choreographyDB.updateLyrics(videoId, lyricsData);
-            displayLyrics(lyricsData);
-        } else {
-            elements.lyricsContent.innerHTML = `
-                <div class="lyrics-error">
-                    <p>Could not transcribe audio.</p>
-                    <p>Make sure the backend server is running.</p>
-                </div>
-            `;
-        }
-    } catch (error) {
-        console.error('Error fetching lyrics:', error);
-
-        // Check if it's a connection error
-        if (error.message.includes('fetch') || error.message.includes('network')) {
-            elements.lyricsContent.innerHTML = `
-                <div class="lyrics-error">
-                    <p>Backend server not running.</p>
-                    <p>Start with: <code>python server.py</code></p>
-                </div>
-            `;
-        } else {
-            elements.lyricsContent.innerHTML = `
-                <div class="lyrics-error">
-                    <p>Transcription failed: ${error.message}</p>
-                </div>
-            `;
-        }
-    }
-}
-
-// Display lyrics in the panel
-function displayLyrics(lyricsData) {
-    currentLyricsData = lyricsData;
-    currentLyricIndex = -1;
-
-    const formattedLyrics = LyricsService.format(lyricsData);
-    if (formattedLyrics) {
-        elements.lyricsContent.innerHTML = formattedLyrics;
-    }
-}
-
-// Sync lyrics highlight with current playback time
-function syncLyrics(currentTime) {
-    if (!currentLyricsData || !currentLyricsData.segments) return;
-
-    const segments = currentLyricsData.segments;
-
-    // Find the current segment
-    let newIndex = -1;
-    for (let i = 0; i < segments.length; i++) {
-        if (currentTime >= segments[i].start && currentTime < segments[i].end) {
-            newIndex = i;
-            break;
-        }
-        // Also highlight if we're past this segment but before the next
-        if (currentTime >= segments[i].start &&
-            (i === segments.length - 1 || currentTime < segments[i + 1].start)) {
-            newIndex = i;
-        }
-    }
-
-    // Update highlight if changed
-    if (newIndex !== currentLyricIndex) {
-        currentLyricIndex = newIndex;
-
-        // Remove all active classes
-        const allLines = elements.lyricsContent.querySelectorAll('.lyrics-line');
-        allLines.forEach(line => line.classList.remove('active'));
-
-        // Add active class to current line
-        if (newIndex >= 0) {
-            const activeLine = elements.lyricsContent.querySelector(`[data-index="${newIndex}"]`);
-            if (activeLine) {
-                activeLine.classList.add('active');
-
-                // Scroll into view
-                activeLine.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center'
-                });
-            }
-        }
-    }
-}
-
-// Toggle lyrics panel
-function toggleLyrics() {
-    elements.lyricsSection.classList.toggle('collapsed');
+    showScreen('complete');
 }
 
 // Handle progress bar click
@@ -761,6 +819,7 @@ function handleProgressClick(event) {
 
     player.seekTo(seekTime, true);
     updateCurrentMove(seekTime);
+    syncLyrics(seekTime);
 }
 
 // Handle speed button
@@ -774,13 +833,14 @@ function handleSpeedChange() {
     }
 }
 
-// Reset and go back
+// Reset and go back to library
 function handleBack() {
     if (player) {
         player.pauseVideo();
     }
     stopUpdateLoop();
-    showScreen('input');
+    stopBeatCounter();
+    showScreen('library');
 }
 
 // Replay routine
@@ -790,35 +850,55 @@ function handleReplay() {
         player.playVideo();
     }
     currentMoveIndex = 0;
+    currentLyricIndex = -1;
     displayCurrentMove();
+    resetBeatCounter();
     showScreen('dance');
 }
 
-// Event Listeners
+// ============ UTILITY FUNCTIONS ============
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ============ EVENT LISTENERS ============
+
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize YouTube API
     initYouTubeAPI();
 
-    // Load saved API key
-    const savedApiKey = localStorage.getItem('claude_api_key');
-    if (savedApiKey) {
-        elements.apiKey.value = savedApiKey;
+    // Load song library
+    loadLibrary();
+
+    // Check for direct song link via URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const directVideoId = urlParams.get('id');
+    if (directVideoId) {
+        // Wait a moment for library to load, then load the song
+        setTimeout(() => loadSong(directVideoId), 500);
     }
 
-    // Input screen events
-    elements.generateBtn.addEventListener('click', handleGenerate);
-    elements.youtubeUrl.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleGenerate();
+    // Filter button events
+    elements.filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            filterLibrary(btn.dataset.filter);
+        });
     });
 
-    // API key toggle
-    elements.toggleApiKey.addEventListener('click', () => {
-        elements.apiKeyContainer.classList.toggle('hidden');
+    // Request song modal events
+    elements.requestSongBtn.addEventListener('click', showRequestModal);
+    elements.closeRequestModal.addEventListener('click', hideRequestModal);
+    elements.requestModal.addEventListener('click', (e) => {
+        if (e.target === elements.requestModal) hideRequestModal();
     });
+    elements.requestForm.addEventListener('submit', submitRequest);
 
     // Dance screen events
     elements.backBtn.addEventListener('click', handleBack);
-    elements.regenerateBtn.addEventListener('click', handleRegenerate);
 
     elements.playPauseBtn.addEventListener('click', () => {
         if (!player) return;
@@ -832,14 +912,10 @@ document.addEventListener('DOMContentLoaded', () => {
     elements.progressBar.addEventListener('click', handleProgressClick);
     elements.speedBtn.addEventListener('click', handleSpeedChange);
 
-    // Lyrics toggle
-    elements.toggleLyricsBtn.addEventListener('click', toggleLyrics);
-
     // Complete screen events
     elements.replayBtn.addEventListener('click', handleReplay);
     elements.newSongBtn.addEventListener('click', () => {
-        elements.youtubeUrl.value = '';
-        showScreen('input');
+        showScreen('library');
     });
 
     // Handle page visibility for pausing
@@ -856,6 +932,7 @@ window.debugDanceCard = {
     getCurrentMove: () => currentRoutine[currentMoveIndex],
     getPlayer: () => player,
     getVideoId: () => currentVideoId,
-    getSongInfo: () => currentSongInfo,
-    isFromCache: () => isFromCache
+    getSongData: () => currentSongData,
+    getLibrary: () => songLibrary,
+    getBPM: () => estimatedBPM
 };

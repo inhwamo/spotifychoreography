@@ -166,8 +166,8 @@ class ChoreographyDB {
 
 // Lyrics/Transcription Service using local Whisper backend
 const LyricsService = {
-    // Backend API base URL
-    API_BASE: 'http://localhost:5000',
+    // Backend API base URL - same origin when served from Flask
+    API_BASE: window.location.origin,
 
     // Transcribe audio from YouTube video using Whisper
     async transcribe(videoId, force = false) {

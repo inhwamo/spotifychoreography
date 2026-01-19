@@ -1,0 +1,1484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Dance Card Generator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #FF2D78;
+            --secondary: #00D4FF;
+            --accent: #FFE135;
+            --green: #00F5A0;
+            --dark: #1a1a2e;
+            --darker: #0f0f1a;
+            --light: #ffffff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #2d1b4e 50%, #1a1a2e 100%);
+            min-height: 100vh;
+            color: var(--light);
+            padding: 20px;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #FF2D78, #FF6B35);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle { color: rgba(255,255,255,0.6); margin-bottom: 30px; }
+
+        /* Auth */
+        #auth-screen, #admin-screen { display: none; }
+        #auth-screen.active, #admin-screen.active { display: block; }
+
+        .auth-form {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 30px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+        }
+
+        .auth-form h2 { margin-bottom: 20px; text-align: center; }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 10px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: transparent;
+            border: none;
+            color: rgba(255,255,255,0.6);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 1rem;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+
+        .tab:hover { color: var(--light); }
+        .tab.active {
+            background: var(--primary);
+            color: var(--light);
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Forms */
+        .form-group { margin-bottom: 15px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.1);
+            color: var(--light);
+            font-family: inherit;
+            font-size: 1rem;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #FF2D78, #FF6B35);
+            color: white;
+        }
+
+        .btn-primary:hover { transform: scale(1.05); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .btn-success { background: var(--green); color: var(--dark); }
+        .btn-danger { background: var(--primary); color: white; }
+        .btn-small { padding: 6px 12px; font-size: 0.85rem; }
+
+        /* Cards */
+        .card {
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .card-title { font-size: 1.1rem; font-weight: 600; }
+
+        /* Song Grid */
+        .song-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .song-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .song-card img {
+            width: 100%;
+            aspect-ratio: 16/9;
+            object-fit: cover;
+        }
+
+        .song-card-body { padding: 15px; }
+        .song-card-title { font-weight: 600; margin-bottom: 5px; }
+        .song-card-artist { color: rgba(255,255,255,0.6); font-size: 0.9rem; }
+
+        .song-card-meta {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            font-size: 0.85rem;
+        }
+
+        .badge {
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-published { background: var(--green); color: var(--dark); }
+        .badge-draft { background: rgba(255,255,255,0.2); }
+        .badge-pending { background: var(--accent); color: var(--dark); }
+
+        .song-card-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        /* Status messages */
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .status-success { background: rgba(0,245,160,0.2); border: 1px solid var(--green); }
+        .status-error { background: rgba(255,45,120,0.2); border: 1px solid var(--primary); }
+        .status-info { background: rgba(0,212,255,0.2); border: 1px solid var(--secondary); }
+
+        /* Processing status */
+        .processing-steps {
+            margin-top: 15px;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .step.active { color: var(--secondary); }
+        .step.done { color: var(--green); }
+        .step.error { color: var(--primary); }
+
+        .step-icon { width: 20px; text-align: center; }
+
+        /* Preview */
+        .preview-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .lyrics-preview {
+            max-height: 200px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            line-height: 1.8;
+        }
+
+        .moves-preview {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .move-chip {
+            padding: 5px 12px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .move-chip:hover {
+            background: var(--primary);
+            transform: scale(1.05);
+        }
+
+        /* Move tooltip/preview */
+        .move-tooltip {
+            position: fixed;
+            background: var(--dark);
+            border: 2px solid var(--primary);
+            border-radius: 15px;
+            padding: 15px;
+            width: 200px;
+            z-index: 1000;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .move-tooltip.visible { opacity: 1; }
+
+        .move-tooltip-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #FF2D78, #FF6B35);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+        }
+
+        .move-tooltip-desc {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 10px;
+        }
+
+        .move-tooltip-meta {
+            display: flex;
+            gap: 10px;
+            font-size: 0.8rem;
+        }
+
+        .move-tooltip-meta span {
+            padding: 3px 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+        }
+
+        /* Song structure display */
+        .structure-preview {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+        }
+
+        .section-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .section-item:last-child { border-bottom: none; }
+
+        .section-type {
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            min-width: 70px;
+            text-align: center;
+        }
+
+        .section-type.intro { background: var(--secondary); color: var(--dark); }
+        .section-type.verse { background: rgba(255,255,255,0.2); }
+        .section-type.pre-chorus { background: #9b5de5; color: var(--light); }
+        .section-type.chorus { background: var(--accent); color: var(--dark); }
+        .section-type.bridge { background: #ff6b35; color: var(--dark); }
+        .section-type.outro { background: var(--green); color: var(--dark); }
+
+        .section-time { color: rgba(255,255,255,0.5); font-size: 0.85rem; min-width: 100px; }
+        .section-lines { color: rgba(255,255,255,0.7); font-size: 0.85rem; flex: 1; }
+
+        /* Thumbnail preview */
+        .thumb-preview {
+            width: 160px;
+            height: 90px;
+            border-radius: 10px;
+            object-fit: cover;
+            border: 2px solid rgba(255,255,255,0.1);
+        }
+
+        /* Requests table */
+        .request-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .request-url {
+            word-break: break-all;
+            flex: 1;
+            margin-right: 15px;
+        }
+
+        .request-actions { display: flex; gap: 8px; }
+
+        /* Loading spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: var(--secondary);
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: var(--dark);
+            border-radius: 20px;
+            padding: 30px;
+            position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.6);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        .modal-close:hover {
+            color: var(--light);
+            background: rgba(255,255,255,0.1);
+        }
+
+        /* Lyrics mode selector */
+        .lyrics-mode-selector {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .radio-option {
+            flex: 1;
+            min-width: 200px;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: block;
+        }
+
+        .radio-option:hover {
+            border-color: rgba(255,255,255,0.3);
+        }
+
+        .radio-option:has(input:checked) {
+            border-color: var(--primary);
+            background: rgba(255,45,120,0.1);
+        }
+
+        .radio-option input {
+            display: none;
+        }
+
+        .radio-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .radio-desc {
+            display: block;
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.5);
+        }
+
+        /* Timestamp Editor */
+        .timestamp-editor {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .timestamp-editor h4 {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .bulk-offset-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+        }
+
+        .bulk-offset-row label {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .bulk-offset-row input {
+            width: 80px;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .timestamp-list {
+            max-height: 300px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            padding: 10px;
+        }
+
+        .timestamp-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .timestamp-row:hover {
+            background: rgba(255,255,255,0.05);
+        }
+
+        .timestamp-row .line-num {
+            color: rgba(255,255,255,0.4);
+            font-size: 0.8rem;
+            min-width: 30px;
+        }
+
+        .timestamp-row .time-input {
+            width: 70px;
+            padding: 6px 8px;
+            text-align: center;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        .timestamp-row .lyric-text {
+            flex: 1;
+            color: rgba(255,255,255,0.8);
+            font-size: 0.9rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .timestamp-row .play-btn {
+            padding: 4px 10px;
+            background: rgba(0,212,255,0.2);
+            border: 1px solid var(--secondary);
+            border-radius: 5px;
+            color: var(--secondary);
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .timestamp-row .play-btn:hover {
+            background: var(--secondary);
+            color: var(--dark);
+        }
+
+        .timestamp-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .tabs { flex-wrap: wrap; }
+            .song-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Auth Screen -->
+        <div id="auth-screen" class="active">
+            <div class="auth-form">
+                <h2>Admin Login</h2>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="admin-password" placeholder="Enter admin password">
+                </div>
+                <button class="btn btn-primary" onclick="login()" style="width:100%">Login</button>
+                <p id="auth-error" style="color:var(--primary);margin-top:10px;text-align:center;display:none">Invalid password</p>
+            </div>
+        </div>
+
+        <!-- Admin Screen -->
+        <div id="admin-screen">
+            <h1>Dance Card Admin</h1>
+            <p class="subtitle">Manage your song library and requests</p>
+
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('add')">Add Song</button>
+                <button class="tab" onclick="showTab('library')">Library</button>
+                <button class="tab" onclick="showTab('requests')">Requests</button>
+            </div>
+
+            <!-- Add Song Tab -->
+            <div id="tab-add" class="tab-content active">
+                <div class="card">
+                    <h3 style="margin-bottom:20px">Process New Song</h3>
+
+                    <div class="form-group">
+                        <label>YouTube URL</label>
+                        <input type="text" id="youtube-url" placeholder="https://youtube.com/watch?v=...">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Claude API Key</label>
+                        <input type="password" id="api-key" placeholder="sk-ant-...">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Lyrics Source</label>
+                        <div class="lyrics-mode-selector">
+                            <label class="radio-option">
+                                <input type="radio" name="lyrics-mode" value="auto" checked onchange="toggleLyricsMode()">
+                                <span class="radio-label">Auto-detect with Whisper</span>
+                                <span class="radio-desc">AI transcribes lyrics from audio</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="lyrics-mode" value="manual" onchange="toggleLyricsMode()">
+                                <span class="radio-label">Paste Lyrics Manually</span>
+                                <span class="radio-desc">Use official lyrics, AI adds timestamps</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="manual-lyrics-section" class="form-group" style="display:none">
+                        <label>Paste Lyrics <span style="color:rgba(255,255,255,0.5);font-weight:normal">(one line per line)</span></label>
+                        <textarea id="manual-lyrics" rows="10" placeholder="Paste song lyrics here...
+
+Example:
+I can buy myself flowers
+Write my name in the sand
+Talk to myself for hours
+Say things you don't understand"></textarea>
+                        <p style="color:rgba(255,255,255,0.5);font-size:0.85rem;margin-top:5px">
+                            Tip: Copy lyrics from Musixmatch, Genius, or AZLyrics for best accuracy.
+                        </p>
+                    </div>
+
+                    <button class="btn btn-primary" id="process-btn" onclick="processSong()">
+                        Process Song
+                    </button>
+
+                    <div id="processing-status" style="display:none">
+                        <div class="processing-steps">
+                            <div class="step" id="step-info">
+                                <span class="step-icon">1</span>
+                                <span>Fetching video info...</span>
+                            </div>
+                            <div class="step" id="step-audio">
+                                <span class="step-icon">2</span>
+                                <span>Downloading audio...</span>
+                            </div>
+                            <div class="step" id="step-transcribe">
+                                <span class="step-icon">3</span>
+                                <span>Transcribing with Whisper...</span>
+                            </div>
+                            <div class="step" id="step-analyze">
+                                <span class="step-icon">4</span>
+                                <span>Analyzing lyrics structure...</span>
+                            </div>
+                            <div class="step" id="step-choreo">
+                                <span class="step-icon">5</span>
+                                <span>Generating choreography...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="preview-section" class="preview-section" style="display:none">
+                        <h4 style="margin-bottom:15px">Preview</h4>
+
+                        <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start">
+                            <img id="preview-thumbnail" class="thumb-preview" src="" alt="Thumbnail" style="display:none">
+                            <div style="flex:1;min-width:200px">
+                                <strong>Song:</strong>
+                                <p id="preview-title" style="font-size:1.2rem;font-weight:600"></p>
+                                <p id="preview-artist" style="color:rgba(255,255,255,0.6)"></p>
+                            </div>
+                            <div>
+                                <strong>Duration:</strong>
+                                <p id="preview-duration"></p>
+                            </div>
+                            <div>
+                                <strong>Moves:</strong>
+                                <p id="preview-move-count"></p>
+                            </div>
+                        </div>
+
+                        <div style="margin-top:15px">
+                            <strong>Lyrics Preview:</strong>
+                            <div class="lyrics-preview" id="preview-lyrics"></div>
+                        </div>
+
+                        <div style="margin-top:15px">
+                            <strong>Song Structure:</strong>
+                            <div class="structure-preview" id="preview-structure"></div>
+                        </div>
+
+                        <div style="margin-top:15px">
+                            <strong>Move Sequence:</strong> <span style="color:rgba(255,255,255,0.5);font-size:0.85rem">(hover for details)</span>
+                            <div class="moves-preview" id="preview-moves"></div>
+                        </div>
+
+                        <div style="margin-top:20px;display:flex;gap:10px">
+                            <button class="btn btn-success" onclick="publishSong()">Publish to Library</button>
+                            <button class="btn btn-secondary" onclick="saveDraft()">Save as Draft</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Library Tab -->
+            <div id="tab-library" class="tab-content">
+                <div id="library-status"></div>
+                <div class="song-grid" id="song-list"></div>
+            </div>
+
+            <!-- Song Detail Modal -->
+            <div id="song-detail-modal" class="modal" style="display:none">
+                <div class="modal-content" style="max-width:700px">
+                    <button class="modal-close" onclick="closeSongModal()">&times;</button>
+                    <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:20px">
+                        <img id="detail-thumbnail" class="thumb-preview" src="" alt="" style="width:200px;height:auto">
+                        <div style="flex:1;min-width:200px">
+                            <h2 id="detail-title" style="font-size:1.3rem;margin-bottom:5px"></h2>
+                            <p id="detail-artist" style="color:rgba(255,255,255,0.6);margin-bottom:10px"></p>
+                            <div style="display:flex;gap:15px;flex-wrap:wrap">
+                                <span><strong>Duration:</strong> <span id="detail-duration"></span></span>
+                                <span><strong>BPM:</strong> <span id="detail-bpm"></span></span>
+                                <span><strong>Moves:</strong> <span id="detail-move-count"></span></span>
+                            </div>
+                            <div style="margin-top:10px">
+                                <span id="detail-status" class="badge"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom:20px">
+                        <strong>Move Sequence:</strong> <span style="color:rgba(255,255,255,0.5);font-size:0.85rem">(hover for details)</span>
+                        <div class="moves-preview" id="detail-moves" style="margin-top:10px;max-height:200px;overflow-y:auto"></div>
+                    </div>
+
+                    <!-- Timestamp Editor -->
+                    <div class="timestamp-editor" id="timestamp-editor">
+                        <h4>
+                            Edit Timestamps
+                            <span style="color:rgba(255,255,255,0.5);font-size:0.85rem;font-weight:normal">Adjust when each lyric appears</span>
+                        </h4>
+
+                        <div class="bulk-offset-row">
+                            <label>Bulk offset:</label>
+                            <input type="number" id="bulk-offset" value="0" step="0.1" placeholder="0">
+                            <span style="color:rgba(255,255,255,0.5)">seconds</span>
+                            <button class="btn btn-secondary btn-small" onclick="applyBulkOffset()">Apply to All</button>
+                        </div>
+
+                        <div class="timestamp-list" id="timestamp-list">
+                            <!-- Populated by JavaScript -->
+                        </div>
+
+                        <div class="timestamp-actions">
+                            <button class="btn btn-success" onclick="saveTimestamps()">Save Timestamps</button>
+                            <button class="btn btn-secondary" onclick="resetTimestamps()">Reset</button>
+                        </div>
+                    </div>
+
+                    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+                        <button class="btn btn-secondary" onclick="closeSongModal()">Close</button>
+                        <a id="detail-edit-link" href="#" target="_blank" class="btn btn-secondary" style="text-decoration:none">Full Editor</a>
+                        <a id="detail-play-link" href="#" target="_blank" class="btn btn-primary" style="text-decoration:none">Play Song</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Requests Tab -->
+            <div id="tab-requests" class="tab-content">
+                <div id="requests-status"></div>
+                <div id="requests-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Move Tooltip (global, works in all contexts) -->
+    <div id="move-tooltip" class="move-tooltip">
+        <div class="move-tooltip-name" id="tooltip-name"></div>
+        <div class="move-tooltip-desc" id="tooltip-desc"></div>
+        <div class="move-tooltip-meta">
+            <span id="tooltip-body"></span>
+            <span id="tooltip-diff"></span>
+        </div>
+    </div>
+
+    <script>
+        // Move catalog for tooltips
+        const MOVE_CATALOG = {
+            'step_touch': { name: 'Step Touch', difficulty: 1, bodyPart: 'Legs', description: 'Step to the side and touch feet together' },
+            'body_roll': { name: 'Body Roll', difficulty: 2, bodyPart: 'Full Body', description: 'Roll your body in a wave motion' },
+            'arm_wave': { name: 'Arm Wave', difficulty: 2, bodyPart: 'Arms', description: 'Create a wave motion across your arms' },
+            'hip_sway': { name: 'Hip Sway', difficulty: 1, bodyPart: 'Hips', description: 'Sway your hips side to side' },
+            'clap': { name: 'Clap', difficulty: 1, bodyPart: 'Arms', description: 'Clap your hands on the beat' },
+            'turn': { name: 'Turn', difficulty: 2, bodyPart: 'Full Body', description: 'Spin around in a circle' },
+            'jump': { name: 'Jump', difficulty: 2, bodyPart: 'Full Body', description: 'Jump up with energy' },
+            'slide': { name: 'Slide', difficulty: 1, bodyPart: 'Legs', description: 'Slide your feet to the side' },
+            'shoulder_pop': { name: 'Shoulder Pop', difficulty: 1, bodyPart: 'Arms', description: 'Pop shoulders up and down' },
+            'snap': { name: 'Snap', difficulty: 1, bodyPart: 'Arms', description: 'Snap fingers to the beat' },
+            'point': { name: 'Point', difficulty: 1, bodyPart: 'Arms', description: 'Point in different directions' },
+            'stomp': { name: 'Stomp', difficulty: 1, bodyPart: 'Legs', description: 'Stomp feet powerfully' },
+            'groove': { name: 'Groove', difficulty: 1, bodyPart: 'Full Body', description: 'Move freely with the beat' },
+            'sway': { name: 'Sway', difficulty: 1, bodyPart: 'Full Body', description: 'Gently sway side to side' },
+            'punch': { name: 'Punch', difficulty: 2, bodyPart: 'Arms', description: 'Punch the air with power' },
+            'shimmy': { name: 'Shimmy', difficulty: 2, bodyPart: 'Arms', description: 'Shake shoulders rapidly' },
+            'twist': { name: 'Twist', difficulty: 1, bodyPart: 'Hips', description: 'Twist hips and feet' }
+        };
+
+        // State
+        let adminPassword = '';
+        let currentSong = null;
+        let currentSongLyrics = [];  // Store lyrics for timestamp editor
+        let originalTimestamps = []; // Store original for reset
+        let currentViewVideoId = null;
+
+        // Auth
+        function login() {
+            adminPassword = document.getElementById('admin-password').value;
+
+            // Test auth by fetching songs
+            fetch('/api/admin/songs', {
+                headers: { 'X-Admin-Password': adminPassword }
+            })
+            .then(res => {
+                if (res.ok) {
+                    document.getElementById('auth-screen').classList.remove('active');
+                    document.getElementById('admin-screen').classList.add('active');
+                    loadLibrary();
+                    loadRequests();
+
+                    // Save API key if stored
+                    const savedKey = localStorage.getItem('claude_api_key');
+                    if (savedKey) {
+                        document.getElementById('api-key').value = savedKey;
+                    }
+                } else {
+                    document.getElementById('auth-error').style.display = 'block';
+                }
+            });
+        }
+
+        // Check for enter key on password
+        document.getElementById('admin-password').addEventListener('keypress', e => {
+            if (e.key === 'Enter') login();
+        });
+
+        // Tabs
+        function showTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+
+            document.querySelector(`.tab[onclick="showTab('${tab}')"]`).classList.add('active');
+            document.getElementById(`tab-${tab}`).classList.add('active');
+
+            if (tab === 'library') loadLibrary();
+            if (tab === 'requests') loadRequests();
+        }
+
+        // Toggle lyrics mode
+        function toggleLyricsMode() {
+            const mode = document.querySelector('input[name="lyrics-mode"]:checked').value;
+            const manualSection = document.getElementById('manual-lyrics-section');
+            const transcribeStep = document.getElementById('step-transcribe').querySelector('span:last-child');
+
+            if (mode === 'manual') {
+                manualSection.style.display = 'block';
+                transcribeStep.textContent = 'Aligning lyrics to audio...';
+            } else {
+                manualSection.style.display = 'none';
+                transcribeStep.textContent = 'Transcribing with Whisper...';
+            }
+        }
+
+        // Process Song
+        async function processSong() {
+            const url = document.getElementById('youtube-url').value.trim();
+            const apiKey = document.getElementById('api-key').value.trim();
+            const lyricsMode = document.querySelector('input[name="lyrics-mode"]:checked').value;
+            const manualLyrics = document.getElementById('manual-lyrics').value.trim();
+
+            if (!url || !apiKey) {
+                alert('Please enter both YouTube URL and API key');
+                return;
+            }
+
+            if (lyricsMode === 'manual' && !manualLyrics) {
+                alert('Please paste lyrics or switch to auto-detect mode');
+                return;
+            }
+
+            // Save API key
+            localStorage.setItem('claude_api_key', apiKey);
+
+            // Show processing status
+            document.getElementById('processing-status').style.display = 'block';
+            document.getElementById('preview-section').style.display = 'none';
+            document.getElementById('process-btn').disabled = true;
+
+            // Reset steps
+            document.querySelectorAll('.step').forEach(s => {
+                s.classList.remove('active', 'done', 'error');
+            });
+
+            // Animate steps (we can't get real progress from backend, so simulate)
+            const steps = ['step-info', 'step-audio', 'step-transcribe', 'step-analyze', 'step-choreo'];
+            let currentStep = 0;
+
+            const stepInterval = setInterval(() => {
+                if (currentStep > 0) {
+                    document.getElementById(steps[currentStep - 1]).classList.remove('active');
+                    document.getElementById(steps[currentStep - 1]).classList.add('done');
+                }
+                if (currentStep < steps.length) {
+                    document.getElementById(steps[currentStep]).classList.add('active');
+                    currentStep++;
+                }
+            }, 3000);
+
+            try {
+                // Build request body
+                const requestBody = {
+                    youtube_url: url,
+                    api_key: apiKey,
+                    lyrics_mode: lyricsMode
+                };
+                if (lyricsMode === 'manual') {
+                    requestBody.manual_lyrics = manualLyrics;
+                }
+
+                const response = await fetch('/api/admin/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Password': adminPassword
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                clearInterval(stepInterval);
+
+                // Mark all steps done
+                steps.forEach(s => {
+                    document.getElementById(s).classList.remove('active');
+                    document.getElementById(s).classList.add('done');
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Store for publishing
+                currentSong = data;
+
+                // Show preview
+                document.getElementById('preview-title').textContent = data.song.title;
+                document.getElementById('preview-artist').textContent = data.song.artist;
+                document.getElementById('preview-duration').textContent = formatDuration(data.song.duration);
+                document.getElementById('preview-move-count').textContent = data.routine.moves.length + ' moves';
+
+                // Show thumbnail
+                const thumbEl = document.getElementById('preview-thumbnail');
+                if (data.song.thumbnail_url) {
+                    thumbEl.src = data.song.thumbnail_url;
+                    thumbEl.style.display = 'block';
+                } else {
+                    thumbEl.style.display = 'none';
+                }
+
+                // Lyrics preview with timestamps
+                const lyricsHtml = data.lyrics.segments
+                    .slice(0, 10)
+                    .map(s => `<div><span style="color:var(--secondary);margin-right:10px">[${formatTime(s.start)}]</span>${s.text}</div>`)
+                    .join('');
+                document.getElementById('preview-lyrics').innerHTML = lyricsHtml || '<em>No lyrics detected</em>';
+
+                // Structure preview
+                const structureHtml = (data.structure.sections || [])
+                    .map(s => `
+                        <div class="section-item">
+                            <span class="section-type ${s.type}">${s.label || s.type.toUpperCase()}</span>
+                            <span class="section-time">${formatTime(s.start)} - ${formatTime(s.end)}</span>
+                            <span class="section-lines">${s.lines.slice(0,2).join(' / ') || 'No lyrics'}${s.lines.length > 2 ? '...' : ''}</span>
+                        </div>
+                    `).join('');
+                document.getElementById('preview-structure').innerHTML = structureHtml || '<em>No structure detected</em>';
+
+                // Moves preview with hover support
+                const movesHtml = data.routine.moves
+                    .map(m => `<span class="move-chip" data-move="${m.moveId}">${formatTime(m.timestamp || m.startTime)} - ${m.moveId}</span>`)
+                    .join('');
+                document.getElementById('preview-moves').innerHTML = movesHtml;
+
+                // Setup move tooltips
+                setupMoveTooltips();
+
+                document.getElementById('preview-section').style.display = 'block';
+
+            } catch (error) {
+                clearInterval(stepInterval);
+                alert('Error: ' + error.message);
+
+                // Mark current step as error
+                document.querySelectorAll('.step.active').forEach(s => {
+                    s.classList.remove('active');
+                    s.classList.add('error');
+                });
+            }
+
+            document.getElementById('process-btn').disabled = false;
+        }
+
+        // Publish song
+        async function publishSong() {
+            if (!currentSong) return;
+
+            try {
+                const response = await fetch(`/api/admin/song/${currentSong.video_id}/publish`, {
+                    method: 'POST',
+                    headers: { 'X-Admin-Password': adminPassword }
+                });
+
+                if (response.ok) {
+                    alert('Song published to library!');
+                    document.getElementById('youtube-url').value = '';
+                    document.getElementById('processing-status').style.display = 'none';
+                    document.getElementById('preview-section').style.display = 'none';
+                    currentSong = null;
+                    showTab('library');
+                }
+            } catch (error) {
+                alert('Error publishing: ' + error.message);
+            }
+        }
+
+        // Save as draft
+        function saveDraft() {
+            alert('Song saved as draft. You can publish it later from the Library tab.');
+            document.getElementById('youtube-url').value = '';
+            document.getElementById('processing-status').style.display = 'none';
+            document.getElementById('preview-section').style.display = 'none';
+            currentSong = null;
+        }
+
+        // Load Library
+        async function loadLibrary() {
+            try {
+                const response = await fetch('/api/admin/songs', {
+                    headers: { 'X-Admin-Password': adminPassword }
+                });
+                const songs = await response.json();
+
+                const html = songs.map(song => `
+                    <div class="song-card">
+                        <img src="${song.thumbnail_url || 'https://via.placeholder.com/320x180?text=No+Thumbnail'}" alt="${song.title}" onclick="viewSong('${song.video_id}')" style="cursor:pointer">
+                        <div class="song-card-body">
+                            <div class="song-card-title">${song.title}</div>
+                            <div class="song-card-artist">${song.artist}</div>
+                            <div class="song-card-meta">
+                                <span class="badge ${song.published ? 'badge-published' : 'badge-draft'}">
+                                    ${song.published ? 'Published' : 'Draft'}
+                                </span>
+                                <span>${formatDuration(song.duration)}</span>
+                                ${song.bpm ? `<span>${Math.round(song.bpm)} BPM</span>` : ''}
+                            </div>
+                            <div class="song-card-actions">
+                                <button class="btn btn-secondary btn-small" onclick="viewSong('${song.video_id}')">View</button>
+                                ${song.published
+                                    ? `<button class="btn btn-secondary btn-small" onclick="unpublishSong('${song.video_id}')">Unpublish</button>`
+                                    : `<button class="btn btn-success btn-small" onclick="publishFromLibrary('${song.video_id}')">Publish</button>`
+                                }
+                                <button class="btn btn-danger btn-small" onclick="deleteSong('${song.video_id}')">Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                document.getElementById('song-list').innerHTML = html || '<p>No songs yet. Add your first song!</p>';
+
+            } catch (error) {
+                document.getElementById('library-status').innerHTML =
+                    `<div class="status status-error">Error loading library: ${error.message}</div>`;
+            }
+        }
+
+        // Publish from library
+        async function publishFromLibrary(videoId) {
+            try {
+                await fetch(`/api/admin/song/${videoId}/publish`, {
+                    method: 'POST',
+                    headers: { 'X-Admin-Password': adminPassword }
+                });
+                loadLibrary();
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Unpublish song
+        async function unpublishSong(videoId) {
+            try {
+                await fetch(`/api/admin/song/${videoId}/unpublish`, {
+                    method: 'POST',
+                    headers: { 'X-Admin-Password': adminPassword }
+                });
+                loadLibrary();
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Delete song
+        async function deleteSong(videoId) {
+            if (!confirm('Are you sure you want to delete this song?')) return;
+
+            try {
+                await fetch(`/api/admin/song/${videoId}`, {
+                    method: 'DELETE',
+                    headers: { 'X-Admin-Password': adminPassword }
+                });
+                loadLibrary();
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Load Requests
+        async function loadRequests() {
+            try {
+                const response = await fetch('/api/admin/requests', {
+                    headers: { 'X-Admin-Password': adminPassword }
+                });
+                const requests = await response.json();
+
+                const html = requests.map(req => `
+                    <div class="request-item">
+                        <div>
+                            <div class="request-url">${req.youtube_url}</div>
+                            ${req.user_note ? `<div style="color:rgba(255,255,255,0.5);font-size:0.85rem;margin-top:5px">${req.user_note}</div>` : ''}
+                            <div style="margin-top:5px">
+                                <span class="badge badge-${req.status === 'pending' ? 'pending' : req.status === 'approved' ? 'published' : 'draft'}">${req.status}</span>
+                            </div>
+                        </div>
+                        <div class="request-actions">
+                            ${req.status === 'pending' ? `
+                                <button class="btn btn-success btn-small" onclick="approveRequest(${req.request_id}, '${req.youtube_url}')">Process</button>
+                                <button class="btn btn-danger btn-small" onclick="rejectRequest(${req.request_id})">Reject</button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `).join('');
+
+                document.getElementById('requests-list').innerHTML = html || '<p>No requests yet.</p>';
+
+            } catch (error) {
+                document.getElementById('requests-status').innerHTML =
+                    `<div class="status status-error">Error loading requests: ${error.message}</div>`;
+            }
+        }
+
+        // Approve request
+        async function approveRequest(requestId, youtubeUrl) {
+            // Update status
+            await fetch(`/api/admin/request/${requestId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-Password': adminPassword
+                },
+                body: JSON.stringify({ status: 'approved' })
+            });
+
+            // Switch to add tab and fill URL
+            document.getElementById('youtube-url').value = youtubeUrl;
+            showTab('add');
+        }
+
+        // Reject request
+        async function rejectRequest(requestId) {
+            await fetch(`/api/admin/request/${requestId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-Password': adminPassword
+                },
+                body: JSON.stringify({ status: 'rejected' })
+            });
+            loadRequests();
+        }
+
+        // Helpers
+        function formatDuration(seconds) {
+            if (!seconds) return '--:--';
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // Move tooltip functionality
+        function setupMoveTooltips() {
+            const tooltip = document.getElementById('move-tooltip');
+            const chips = document.querySelectorAll('.move-chip[data-move]');
+
+            chips.forEach(chip => {
+                chip.addEventListener('mouseenter', (e) => {
+                    const moveId = chip.dataset.move;
+                    const move = MOVE_CATALOG[moveId];
+
+                    if (move) {
+                        document.getElementById('tooltip-name').textContent = move.name;
+                        document.getElementById('tooltip-desc').textContent = move.description;
+                        document.getElementById('tooltip-body').textContent = move.bodyPart;
+                        document.getElementById('tooltip-diff').textContent = '⭐'.repeat(move.difficulty);
+
+                        // Position tooltip
+                        const rect = chip.getBoundingClientRect();
+                        tooltip.style.left = rect.left + 'px';
+                        tooltip.style.top = (rect.bottom + 10) + 'px';
+                        tooltip.classList.add('visible');
+                    }
+                });
+
+                chip.addEventListener('mouseleave', () => {
+                    tooltip.classList.remove('visible');
+                });
+            });
+        }
+
+        // View song details in modal
+        async function viewSong(videoId) {
+            try {
+                const response = await fetch(`/api/songs/${videoId}`, {
+                    headers: { 'X-Admin-Password': adminPassword }
+                });
+                const data = await response.json();
+
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                    return;
+                }
+
+                const song = data.song;
+                const routine = data.routine;
+                const lyrics = data.lyrics || { segments: [] };
+
+                // Store for timestamp editor
+                currentViewVideoId = videoId;
+                currentSongLyrics = lyrics.segments || [];
+                originalTimestamps = currentSongLyrics.map(s => s.start);
+
+                // Populate modal
+                document.getElementById('detail-thumbnail').src = song.thumbnail_url || 'https://via.placeholder.com/200x112?text=No+Thumbnail';
+                document.getElementById('detail-title').textContent = song.title;
+                document.getElementById('detail-artist').textContent = song.artist;
+                document.getElementById('detail-duration').textContent = formatDuration(song.duration);
+                document.getElementById('detail-bpm').textContent = song.bpm ? Math.round(song.bpm) : '--';
+
+                // Status badge
+                const statusEl = document.getElementById('detail-status');
+                statusEl.textContent = song.published ? 'Published' : 'Draft';
+                statusEl.className = 'badge ' + (song.published ? 'badge-published' : 'badge-draft');
+
+                // Moves
+                const moves = routine?.moves || [];
+                document.getElementById('detail-move-count').textContent = moves.length;
+
+                const movesHtml = moves.map(m =>
+                    `<span class="move-chip" data-move="${m.moveId}">${formatTime(m.startTime || m.timestamp || 0)} - ${m.moveId}</span>`
+                ).join('');
+                document.getElementById('detail-moves').innerHTML = movesHtml || '<em>No moves</em>';
+
+                // Populate timestamp editor
+                populateTimestampEditor(currentSongLyrics);
+
+                // Reset bulk offset
+                document.getElementById('bulk-offset').value = '0';
+
+                // Play link - use index.html with query param
+                document.getElementById('detail-play-link').href = `/?id=${videoId}`;
+
+                // Editor link - open full timestamp editor
+                document.getElementById('detail-edit-link').href = `/editor?id=${videoId}`;
+
+                // Store admin password for editor
+                localStorage.setItem('admin_password', adminPassword);
+
+                // Show modal
+                document.getElementById('song-detail-modal').style.display = 'flex';
+
+                // Setup tooltips for modal moves
+                setupMoveTooltips();
+
+            } catch (error) {
+                alert('Error loading song: ' + error.message);
+            }
+        }
+
+        // Populate timestamp editor with lyrics
+        function populateTimestampEditor(segments) {
+            const container = document.getElementById('timestamp-list');
+
+            if (!segments || segments.length === 0) {
+                container.innerHTML = '<p style="color:rgba(255,255,255,0.5);padding:15px;text-align:center">No lyrics available for this song</p>';
+                return;
+            }
+
+            const html = segments.map((seg, i) => `
+                <div class="timestamp-row" data-index="${i}">
+                    <span class="line-num">${i + 1}</span>
+                    <input type="text" class="time-input" id="ts-${i}" value="${formatTimeMs(seg.start)}" onchange="updateTimestamp(${i})">
+                    <span class="lyric-text" title="${escapeHtml(seg.text)}">${escapeHtml(seg.text)}</span>
+                    <button class="play-btn" onclick="playFromTimestamp(${i})">&#9654; Play</button>
+                </div>
+            `).join('');
+
+            container.innerHTML = html;
+        }
+
+        // Format time with milliseconds (M:SS.s)
+        function formatTimeMs(seconds) {
+            if (seconds === undefined || seconds === null) return '0:00.0';
+            const mins = Math.floor(seconds / 60);
+            const secs = (seconds % 60).toFixed(1);
+            return `${mins}:${secs.padStart(4, '0')}`;
+        }
+
+        // Parse time from M:SS.s format
+        function parseTimeMs(timeStr) {
+            const parts = timeStr.split(':');
+            if (parts.length === 2) {
+                const mins = parseInt(parts[0]) || 0;
+                const secs = parseFloat(parts[1]) || 0;
+                return mins * 60 + secs;
+            }
+            return parseFloat(timeStr) || 0;
+        }
+
+        // Escape HTML special chars
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Update timestamp from input
+        function updateTimestamp(index) {
+            const input = document.getElementById(`ts-${index}`);
+            const newTime = parseTimeMs(input.value);
+            if (currentSongLyrics[index]) {
+                currentSongLyrics[index].start = newTime;
+            }
+        }
+
+        // Play 4 seconds of audio from a specific timestamp
+        function playFromTimestamp(index) {
+            const time = currentSongLyrics[index]?.start || 0;
+            // Open player in new tab at this timestamp
+            window.open(`/?id=${currentViewVideoId}&t=${Math.floor(time)}`, '_blank');
+        }
+
+        // Apply bulk offset to all timestamps
+        function applyBulkOffset() {
+            const offset = parseFloat(document.getElementById('bulk-offset').value) || 0;
+
+            currentSongLyrics.forEach((seg, i) => {
+                seg.start = Math.max(0, seg.start + offset);
+                const input = document.getElementById(`ts-${i}`);
+                if (input) {
+                    input.value = formatTimeMs(seg.start);
+                }
+            });
+
+            // Reset offset field
+            document.getElementById('bulk-offset').value = '0';
+        }
+
+        // Reset timestamps to original
+        function resetTimestamps() {
+            currentSongLyrics.forEach((seg, i) => {
+                seg.start = originalTimestamps[i] || 0;
+                const input = document.getElementById(`ts-${i}`);
+                if (input) {
+                    input.value = formatTimeMs(seg.start);
+                }
+            });
+            document.getElementById('bulk-offset').value = '0';
+        }
+
+        // Save timestamps to server
+        async function saveTimestamps() {
+            if (!currentViewVideoId) {
+                alert('No song selected');
+                return;
+            }
+
+            // Build segments array from edited lyrics
+            const segments = currentSongLyrics.map(seg => ({
+                start: seg.start,
+                end: seg.end,
+                text: seg.text
+            }));
+
+            try {
+                const response = await fetch(`/api/admin/song/${currentViewVideoId}/timestamps`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Password': adminPassword
+                    },
+                    body: JSON.stringify({ segments })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    alert('Error saving: ' + data.error);
+                } else {
+                    alert('Timestamps saved successfully!');
+                    // Update original timestamps
+                    originalTimestamps = currentSongLyrics.map(s => s.start);
+                }
+            } catch (error) {
+                alert('Error saving timestamps: ' + error.message);
+            }
+        }
+
+        // Close song detail modal
+        function closeSongModal() {
+            document.getElementById('song-detail-modal').style.display = 'none';
+        }
+
+        // Close modal on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeSongModal();
+            }
+        });
+
+        // Close modal on background click
+        document.getElementById('song-detail-modal')?.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                closeSongModal();
+            }
+        });
+    </script>
+</body>
+</html>
