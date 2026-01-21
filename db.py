@@ -21,6 +21,50 @@ def get_connection() -> sqlite3.Connection:
     return conn
 
 
+def migrate_lyrics_to_separate_table(cursor):
+    """Migrate lyrics_json from songs table to separate lyrics table."""
+    # Check if there's data to migrate
+    cursor.execute('''
+        SELECT video_id, lyrics_json FROM songs
+        WHERE lyrics_json IS NOT NULL AND lyrics_json != ''
+    ''')
+    songs_with_lyrics = cursor.fetchall()
+
+    for row in songs_with_lyrics:
+        video_id = row[0]
+        lyrics_json = row[1]
+
+        # Check if already migrated
+        cursor.execute('SELECT video_id FROM lyrics WHERE video_id = ?', (video_id,))
+        if cursor.fetchone():
+            continue  # Already migrated
+
+        # Parse the old lyrics format and extract segments
+        try:
+            lyrics_data = json.loads(lyrics_json)
+            # Handle different formats
+            if isinstance(lyrics_data, dict) and 'segments' in lyrics_data:
+                segments = lyrics_data['segments']
+                structure = lyrics_data.get('structure')
+            elif isinstance(lyrics_data, list):
+                segments = lyrics_data
+                structure = None
+            else:
+                segments = []
+                structure = None
+
+            # Insert into lyrics table
+            cursor.execute('''
+                INSERT INTO lyrics (video_id, segments_json, structure_json, last_edited)
+                VALUES (?, ?, ?, ?)
+            ''', (video_id, json.dumps(segments),
+                  json.dumps(structure) if structure else None,
+                  datetime.now().isoformat()))
+
+        except (json.JSONDecodeError, TypeError):
+            pass  # Skip invalid data
+
+
 def init_database():
     """Initialize the database with all required tables."""
     conn = get_connection()
@@ -62,17 +106,42 @@ def init_database():
         )
     ''')
 
-    # Routines table - choreography sequences for songs
+    # Lyrics table - stores lyrics separately (ONE per song, manually editable)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS lyrics (
+            video_id TEXT PRIMARY KEY,
+            segments_json TEXT NOT NULL,
+            structure_json TEXT,
+            last_edited TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (video_id) REFERENCES songs(video_id)
+        )
+    ''')
+
+    # Routines table - choreography sequences for songs (MANY per song)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS routines (
             routine_id INTEGER PRIMARY KEY AUTOINCREMENT,
             video_id TEXT NOT NULL,
+            version_name TEXT DEFAULT 'Original',
             move_sequence_json TEXT NOT NULL,
-            song_structure_json TEXT,
+            is_default INTEGER DEFAULT 0,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (video_id) REFERENCES songs(video_id)
         )
     ''')
+
+    # Add version_name and is_default columns if they don't exist (migration)
+    try:
+        cursor.execute('ALTER TABLE routines ADD COLUMN version_name TEXT DEFAULT "Original"')
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute('ALTER TABLE routines ADD COLUMN is_default INTEGER DEFAULT 0')
+    except sqlite3.OperationalError:
+        pass
+
+    # Migrate existing lyrics from songs table to lyrics table
+    migrate_lyrics_to_separate_table(cursor)
 
     # Song requests table - user-submitted song requests
     cursor.execute('''
@@ -204,13 +273,83 @@ def delete_song(video_id: str) -> bool:
     return deleted
 
 
-# ============ ROUTINE OPERATIONS ============
+# ============ LYRICS OPERATIONS ============
 
-def get_routine(video_id: str) -> Optional[Dict]:
-    """Get the routine for a song."""
+def get_lyrics(video_id: str) -> Optional[Dict]:
+    """Get lyrics for a song from the separate lyrics table."""
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM routines WHERE video_id = ? ORDER BY created_at DESC LIMIT 1', (video_id,))
+    cursor.execute('SELECT * FROM lyrics WHERE video_id = ?', (video_id,))
+    row = cursor.fetchone()
+    conn.close()
+
+    if row:
+        result = dict(row)
+        # Parse JSON fields
+        if result.get('segments_json'):
+            result['segments'] = json.loads(result['segments_json'])
+        if result.get('structure_json'):
+            result['structure'] = json.loads(result['structure_json'])
+        return result
+    return None
+
+
+def save_lyrics(video_id: str, segments: List[Dict],
+                structure: Optional[Dict] = None) -> Dict:
+    """Save lyrics for a song (separate from choreography)."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        INSERT OR REPLACE INTO lyrics (video_id, segments_json, structure_json, last_edited)
+        VALUES (?, ?, ?, ?)
+    ''', (video_id, json.dumps(segments),
+          json.dumps(structure) if structure else None,
+          datetime.now().isoformat()))
+
+    conn.commit()
+    conn.close()
+
+    return get_lyrics(video_id)
+
+
+def update_lyrics_timestamps(video_id: str, segments: List[Dict]) -> Optional[Dict]:
+    """Update just the timestamps/text in lyrics (preserves structure)."""
+    existing = get_lyrics(video_id)
+    if not existing:
+        # Create new lyrics entry
+        return save_lyrics(video_id, segments)
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        UPDATE lyrics SET segments_json = ?, last_edited = ?
+        WHERE video_id = ?
+    ''', (json.dumps(segments), datetime.now().isoformat(), video_id))
+
+    conn.commit()
+    conn.close()
+
+    return get_lyrics(video_id)
+
+
+# ============ ROUTINE OPERATIONS ============
+
+def get_routine(video_id: str, routine_id: Optional[int] = None) -> Optional[Dict]:
+    """Get a routine for a song (default or specific by ID)."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    if routine_id:
+        cursor.execute('SELECT * FROM routines WHERE routine_id = ?', (routine_id,))
+    else:
+        # Get default routine, or most recent if no default
+        cursor.execute('''
+            SELECT * FROM routines WHERE video_id = ?
+            ORDER BY is_default DESC, created_at DESC LIMIT 1
+        ''', (video_id,))
+
     row = cursor.fetchone()
     conn.close()
 
@@ -219,32 +358,138 @@ def get_routine(video_id: str) -> Optional[Dict]:
         # Parse JSON fields
         if result.get('move_sequence_json'):
             result['moves'] = json.loads(result['move_sequence_json'])
-        if result.get('song_structure_json'):
-            result['structure'] = json.loads(result['song_structure_json'])
         return result
     return None
 
 
+def get_all_routines(video_id: str) -> List[Dict]:
+    """Get all routines for a song."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT * FROM routines WHERE video_id = ?
+        ORDER BY is_default DESC, created_at DESC
+    ''', (video_id,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    routines = []
+    for row in rows:
+        result = dict(row)
+        if result.get('move_sequence_json'):
+            result['moves'] = json.loads(result['move_sequence_json'])
+        routines.append(result)
+    return routines
+
+
 def save_routine(video_id: str, move_sequence: List[Dict],
-                 song_structure: Optional[Dict] = None) -> Dict:
-    """Save a routine for a song."""
+                 version_name: str = 'Original', is_default: bool = False) -> Dict:
+    """Save a new routine for a song (supports multiple versions)."""
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Delete existing routine for this song
-    cursor.execute('DELETE FROM routines WHERE video_id = ?', (video_id,))
+    # If this is set as default, unset other defaults
+    if is_default:
+        cursor.execute('UPDATE routines SET is_default = 0 WHERE video_id = ?', (video_id,))
+
+    # Check if this is the first routine for this song
+    cursor.execute('SELECT COUNT(*) FROM routines WHERE video_id = ?', (video_id,))
+    is_first = cursor.fetchone()[0] == 0
 
     # Insert new routine
     cursor.execute('''
-        INSERT INTO routines (video_id, move_sequence_json, song_structure_json)
-        VALUES (?, ?, ?)
-    ''', (video_id, json.dumps(move_sequence),
-          json.dumps(song_structure) if song_structure else None))
+        INSERT INTO routines (video_id, version_name, move_sequence_json, is_default)
+        VALUES (?, ?, ?, ?)
+    ''', (video_id, version_name, json.dumps(move_sequence),
+          1 if (is_default or is_first) else 0))
+
+    routine_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+
+    return get_routine(video_id, routine_id)
+
+
+def update_routine(routine_id: int, move_sequence: Optional[List[Dict]] = None,
+                   version_name: Optional[str] = None, is_default: Optional[bool] = None) -> Optional[Dict]:
+    """Update an existing routine."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Build update query dynamically
+    updates = []
+    values = []
+
+    if move_sequence is not None:
+        updates.append('move_sequence_json = ?')
+        values.append(json.dumps(move_sequence))
+
+    if version_name is not None:
+        updates.append('version_name = ?')
+        values.append(version_name)
+
+    if is_default is not None:
+        # If setting as default, unset others first
+        if is_default:
+            cursor.execute('''
+                UPDATE routines SET is_default = 0
+                WHERE video_id = (SELECT video_id FROM routines WHERE routine_id = ?)
+            ''', (routine_id,))
+        updates.append('is_default = ?')
+        values.append(1 if is_default else 0)
+
+    if not updates:
+        conn.close()
+        return get_routine(None, routine_id)
+
+    values.append(routine_id)
+    cursor.execute(f'''
+        UPDATE routines SET {', '.join(updates)} WHERE routine_id = ?
+    ''', values)
 
     conn.commit()
     conn.close()
 
-    return get_routine(video_id)
+    return get_routine(None, routine_id)
+
+
+def delete_routine(routine_id: int) -> bool:
+    """Delete a routine."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('DELETE FROM routines WHERE routine_id = ?', (routine_id,))
+    deleted = cursor.rowcount > 0
+
+    conn.commit()
+    conn.close()
+
+    return deleted
+
+
+def set_default_routine(routine_id: int) -> bool:
+    """Set a routine as the default for its song."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Get video_id for this routine
+    cursor.execute('SELECT video_id FROM routines WHERE routine_id = ?', (routine_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return False
+
+    video_id = row[0]
+
+    # Unset all defaults for this song
+    cursor.execute('UPDATE routines SET is_default = 0 WHERE video_id = ?', (video_id,))
+
+    # Set this one as default
+    cursor.execute('UPDATE routines SET is_default = 1 WHERE routine_id = ?', (routine_id,))
+
+    conn.commit()
+    conn.close()
+    return True
 
 
 # ============ MOVE CATALOG OPERATIONS ============
@@ -362,26 +607,34 @@ def update_request_status(request_id: int, status: str) -> bool:
 
 # ============ FULL SONG DATA ============
 
-def get_song_with_routine(video_id: str) -> Optional[Dict]:
-    """Get a song with its routine and parsed lyrics."""
+def get_song_with_routine(video_id: str, routine_id: Optional[int] = None) -> Optional[Dict]:
+    """Get a song with its lyrics and routine (from separate tables)."""
     song = get_song(video_id)
     if not song:
         return None
 
-    routine = get_routine(video_id)
+    # Get lyrics from separate table
+    lyrics_data = get_lyrics(video_id)
 
-    # Parse lyrics JSON
+    # Get routine (default or specified)
+    routine = get_routine(video_id, routine_id)
+
+    # Get all routines for this song
+    all_routines = get_all_routines(video_id)
+
+    # Build lyrics object
     lyrics = None
-    if song.get('lyrics_json'):
-        try:
-            lyrics = json.loads(song['lyrics_json'])
-        except json.JSONDecodeError:
-            lyrics = None
+    structure = None
+    if lyrics_data:
+        lyrics = {'segments': lyrics_data.get('segments', [])}
+        structure = lyrics_data.get('structure')
 
     return {
         'song': song,
         'routine': routine,
-        'lyrics': lyrics
+        'lyrics': lyrics,
+        'structure': {'sections': structure} if structure else None,
+        'all_routines': all_routines
     }
 
 

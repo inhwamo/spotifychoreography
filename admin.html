@@ -741,8 +741,10 @@ Say things you don't understand"></textarea>
 
             <!-- Song Detail Modal -->
             <div id="song-detail-modal" class="modal" style="display:none">
-                <div class="modal-content" style="max-width:700px">
+                <div class="modal-content" style="max-width:800px">
                     <button class="modal-close" onclick="closeSongModal()">&times;</button>
+
+                    <!-- Song Info Header -->
                     <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:20px">
                         <img id="detail-thumbnail" class="thumb-preview" src="" alt="" style="width:200px;height:auto">
                         <div style="flex:1;min-width:200px">
@@ -751,7 +753,6 @@ Say things you don't understand"></textarea>
                             <div style="display:flex;gap:15px;flex-wrap:wrap">
                                 <span><strong>Duration:</strong> <span id="detail-duration"></span></span>
                                 <span><strong>BPM:</strong> <span id="detail-bpm"></span></span>
-                                <span><strong>Moves:</strong> <span id="detail-move-count"></span></span>
                             </div>
                             <div style="margin-top:10px">
                                 <span id="detail-status" class="badge"></span>
@@ -759,15 +760,59 @@ Say things you don't understand"></textarea>
                         </div>
                     </div>
 
-                    <div style="margin-bottom:20px">
-                        <strong>Move Sequence:</strong> <span style="color:rgba(255,255,255,0.5);font-size:0.85rem">(hover for details)</span>
-                        <div class="moves-preview" id="detail-moves" style="margin-top:10px;max-height:200px;overflow-y:auto"></div>
+                    <!-- Two Column Layout: Lyrics | Choreographies -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+
+                        <!-- LYRICS Section (preserved when regenerating) -->
+                        <div style="background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);border-radius:12px;padding:15px">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                                <h4 style="color:var(--secondary);margin:0">Lyrics</h4>
+                                <span class="badge" style="background:var(--secondary);color:var(--dark)">PRESERVED</span>
+                            </div>
+                            <p style="font-size:0.85rem;color:rgba(255,255,255,0.6);margin-bottom:10px">
+                                Your carefully edited timestamps are safe here. Regenerating choreography won't affect them.
+                            </p>
+                            <div style="margin-bottom:10px">
+                                <span id="detail-lyrics-count">0 lines</span>
+                            </div>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap">
+                                <a id="detail-edit-link" href="#" target="_blank" class="btn btn-secondary btn-small" style="text-decoration:none">Open Editor</a>
+                                <button class="btn btn-secondary btn-small" onclick="toggleQuickEditor()">Quick Edit</button>
+                            </div>
+                        </div>
+
+                        <!-- CHOREOGRAPHIES Section (can regenerate) -->
+                        <div style="background:rgba(255,45,120,0.1);border:1px solid rgba(255,45,120,0.3);border-radius:12px;padding:15px">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                                <h4 style="color:var(--primary);margin:0">Choreographies</h4>
+                                <span class="badge" style="background:var(--primary);color:white">REGENERABLE</span>
+                            </div>
+                            <p style="font-size:0.85rem;color:rgba(255,255,255,0.6);margin-bottom:10px">
+                                Multiple dance versions per song. Generate new ones without losing lyrics.
+                            </p>
+                            <div id="routines-list" style="margin-bottom:10px;max-height:100px;overflow-y:auto">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap">
+                                <button class="btn btn-primary btn-small" onclick="openRegenerateModal()">+ New Version</button>
+                            </div>
+                        </div>
+
                     </div>
 
-                    <!-- Timestamp Editor -->
-                    <div class="timestamp-editor" id="timestamp-editor">
+                    <!-- Current Choreography Preview -->
+                    <div style="margin-bottom:20px">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                            <strong>Current Choreography: <span id="detail-routine-name" style="color:var(--primary)">Original</span></strong>
+                            <span style="color:rgba(255,255,255,0.5);font-size:0.85rem"><span id="detail-move-count">0</span> moves (hover for details)</span>
+                        </div>
+                        <div class="moves-preview" id="detail-moves" style="max-height:150px;overflow-y:auto"></div>
+                    </div>
+
+                    <!-- Quick Timestamp Editor (collapsible) -->
+                    <div class="timestamp-editor" id="timestamp-editor" style="display:none">
                         <h4>
-                            Edit Timestamps
+                            Quick Timestamp Edit
                             <span style="color:rgba(255,255,255,0.5);font-size:0.85rem;font-weight:normal">Adjust when each lyric appears</span>
                         </h4>
 
@@ -783,15 +828,49 @@ Say things you don't understand"></textarea>
                         </div>
 
                         <div class="timestamp-actions">
-                            <button class="btn btn-success" onclick="saveTimestamps()">Save Timestamps</button>
+                            <button class="btn btn-success" onclick="saveTimestamps()">Save Lyrics Only</button>
                             <button class="btn btn-secondary" onclick="resetTimestamps()">Reset</button>
+                            <span style="font-size:0.8rem;color:rgba(255,255,255,0.5);margin-left:10px">Choreography unchanged</span>
                         </div>
                     </div>
 
-                    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+                    <!-- Footer Actions -->
+                    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:15px;border-top:1px solid rgba(255,255,255,0.1)">
                         <button class="btn btn-secondary" onclick="closeSongModal()">Close</button>
-                        <a id="detail-edit-link" href="#" target="_blank" class="btn btn-secondary" style="text-decoration:none">Full Editor</a>
                         <a id="detail-play-link" href="#" target="_blank" class="btn btn-primary" style="text-decoration:none">Play Song</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Regenerate Choreography Modal -->
+            <div id="regenerate-modal" class="modal" style="display:none">
+                <div class="modal-content" style="max-width:450px">
+                    <button class="modal-close" onclick="closeRegenerateModal()">&times;</button>
+                    <h3 style="margin-bottom:15px">Generate New Choreography</h3>
+                    <p style="color:rgba(255,255,255,0.6);margin-bottom:20px;font-size:0.9rem">
+                        This will create a new dance routine using your existing lyrics. Your carefully edited timestamps will be preserved.
+                    </p>
+
+                    <div class="form-group">
+                        <label>Version Name</label>
+                        <input type="text" id="regen-version-name" placeholder="e.g., 'Easy Version', 'Party Mix'">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Claude API Key</label>
+                        <input type="password" id="regen-api-key" placeholder="sk-ant-...">
+                    </div>
+
+                    <div class="form-group">
+                        <label style="display:flex;align-items:center;gap:8px">
+                            <input type="checkbox" id="regen-set-default">
+                            <span>Set as default choreography</span>
+                        </label>
+                    </div>
+
+                    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+                        <button class="btn btn-secondary" onclick="closeRegenerateModal()">Cancel</button>
+                        <button class="btn btn-primary" id="regen-btn" onclick="regenerateChoreography()">Generate</button>
                     </div>
                 </div>
             </div>
@@ -1279,13 +1358,14 @@ Say things you don't understand"></textarea>
                 const song = data.song;
                 const routine = data.routine;
                 const lyrics = data.lyrics || { segments: [] };
+                const allRoutines = data.all_routines || [];
 
                 // Store for timestamp editor
                 currentViewVideoId = videoId;
                 currentSongLyrics = lyrics.segments || [];
                 originalTimestamps = currentSongLyrics.map(s => s.start);
 
-                // Populate modal
+                // Populate modal - Song info
                 document.getElementById('detail-thumbnail').src = song.thumbnail_url || 'https://via.placeholder.com/200x112?text=No+Thumbnail';
                 document.getElementById('detail-title').textContent = song.title;
                 document.getElementById('detail-artist').textContent = song.artist;
@@ -1297,8 +1377,30 @@ Say things you don't understand"></textarea>
                 statusEl.textContent = song.published ? 'Published' : 'Draft';
                 statusEl.className = 'badge ' + (song.published ? 'badge-published' : 'badge-draft');
 
+                // Lyrics count
+                document.getElementById('detail-lyrics-count').textContent = `${currentSongLyrics.length} lines`;
+
+                // Routines list
+                const routinesListHtml = allRoutines.map(r => `
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.1)">
+                        <span style="font-size:0.85rem">
+                            ${r.is_default ? '★ ' : ''}${r.version_name || 'Unnamed'}
+                            <span style="color:rgba(255,255,255,0.4)">(${r.moves?.length || 0} moves)</span>
+                        </span>
+                        <div style="display:flex;gap:5px">
+                            ${!r.is_default ? `<button class="btn btn-secondary btn-small" style="padding:2px 8px;font-size:0.7rem" onclick="setDefaultRoutine(${r.routine_id})">Set Default</button>` : ''}
+                            ${allRoutines.length > 1 ? `<button class="btn btn-danger btn-small" style="padding:2px 8px;font-size:0.7rem" onclick="deleteRoutine(${r.routine_id})">Del</button>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+                document.getElementById('routines-list').innerHTML = routinesListHtml || '<p style="color:rgba(255,255,255,0.5);font-size:0.85rem">No choreographies yet</p>';
+
+                // Current routine info
+                const currentRoutine = routine || allRoutines[0];
+                document.getElementById('detail-routine-name').textContent = currentRoutine?.version_name || 'Original';
+
                 // Moves
-                const moves = routine?.moves || [];
+                const moves = currentRoutine?.moves || [];
                 document.getElementById('detail-move-count').textContent = moves.length;
 
                 const movesHtml = moves.map(m =>
@@ -1306,8 +1408,9 @@ Say things you don't understand"></textarea>
                 ).join('');
                 document.getElementById('detail-moves').innerHTML = movesHtml || '<em>No moves</em>';
 
-                // Populate timestamp editor
+                // Populate timestamp editor (but keep it hidden initially)
                 populateTimestampEditor(currentSongLyrics);
+                document.getElementById('timestamp-editor').style.display = 'none';
 
                 // Reset bulk offset
                 document.getElementById('bulk-offset').value = '0';
@@ -1321,6 +1424,9 @@ Say things you don't understand"></textarea>
                 // Store admin password for editor
                 localStorage.setItem('admin_password', adminPassword);
 
+                // Pre-fill regenerate modal
+                document.getElementById('regen-api-key').value = localStorage.getItem('claude_api_key') || '';
+
                 // Show modal
                 document.getElementById('song-detail-modal').style.display = 'flex';
 
@@ -1329,6 +1435,101 @@ Say things you don't understand"></textarea>
 
             } catch (error) {
                 alert('Error loading song: ' + error.message);
+            }
+        }
+
+        // Toggle quick timestamp editor visibility
+        function toggleQuickEditor() {
+            const editor = document.getElementById('timestamp-editor');
+            editor.style.display = editor.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Open regenerate choreography modal
+        function openRegenerateModal() {
+            document.getElementById('regen-version-name').value = '';
+            document.getElementById('regen-set-default').checked = false;
+            document.getElementById('regenerate-modal').style.display = 'flex';
+        }
+
+        // Close regenerate modal
+        function closeRegenerateModal() {
+            document.getElementById('regenerate-modal').style.display = 'none';
+        }
+
+        // Regenerate choreography (creates new version, preserves lyrics)
+        async function regenerateChoreography() {
+            const versionName = document.getElementById('regen-version-name').value.trim() || 'New Version';
+            const apiKey = document.getElementById('regen-api-key').value.trim();
+            const setDefault = document.getElementById('regen-set-default').checked;
+
+            if (!apiKey) {
+                alert('Please enter your Claude API key');
+                return;
+            }
+
+            const btn = document.getElementById('regen-btn');
+            btn.disabled = true;
+            btn.textContent = 'Generating...';
+
+            try {
+                const response = await fetch(`/api/admin/song/${currentViewVideoId}/regenerate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Password': adminPassword
+                    },
+                    body: JSON.stringify({
+                        api_key: apiKey,
+                        version_name: versionName,
+                        set_as_default: setDefault
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                alert(`New choreography "${versionName}" created with ${data.moves_count} moves!\\nYour lyrics remain unchanged.`);
+                closeRegenerateModal();
+
+                // Refresh the song view
+                viewSong(currentViewVideoId);
+
+            } catch (error) {
+                alert('Error regenerating: ' + error.message);
+            }
+
+            btn.disabled = false;
+            btn.textContent = 'Generate';
+        }
+
+        // Set a routine as default
+        async function setDefaultRoutine(routineId) {
+            try {
+                await fetch(`/api/admin/routines/${routineId}/default`, {
+                    method: 'POST',
+                    headers: { 'X-Admin-Password': adminPassword }
+                });
+                viewSong(currentViewVideoId);
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Delete a routine
+        async function deleteRoutine(routineId) {
+            if (!confirm('Delete this choreography version?')) return;
+
+            try {
+                await fetch(`/api/admin/routines/${routineId}`, {
+                    method: 'DELETE',
+                    headers: { 'X-Admin-Password': adminPassword }
+                });
+                viewSong(currentViewVideoId);
+            } catch (error) {
+                alert('Error: ' + error.message);
             }
         }
 

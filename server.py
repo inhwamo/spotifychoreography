@@ -912,24 +912,30 @@ def admin_process_song():
         # Add BPM to structure
         structure['estimatedBPM'] = bpm
 
-        # Step 6: Save to database
+        # Step 6: Save to database (separate lyrics and routine)
         print(f"\n[PROCESS] Step 6: Saving to database...")
+
+        # Save song metadata (without lyrics)
         db.save_song(
             video_id=video_id,
             title=info['title'],
             artist=info['artist'],
             youtube_url=url,
-            lyrics_json=json.dumps(lyrics),
+            lyrics_json=None,  # Lyrics now stored separately
             duration=duration,
             bpm=bpm,
             thumbnail_url=info.get('thumbnail_url', ''),
             difficulty=2,
             published=False
         )
+        print(f"[PROCESS]   Song metadata saved! ID: {video_id}")
 
-        # Save routine with debug
-        saved_routine = db.save_routine(video_id, normalized_moves, structure)
-        print(f"[PROCESS]   Song saved! ID: {video_id}")
+        # Save lyrics separately (preserves even if choreography regenerated)
+        db.save_lyrics(video_id, lyrics['segments'], structure.get('sections'))
+        print(f"[PROCESS]   Lyrics saved! {len(lyrics['segments'])} segments")
+
+        # Save routine (choreography)
+        saved_routine = db.save_routine(video_id, normalized_moves, version_name='Original', is_default=True)
         print(f"[PROCESS]   Routine saved! Moves in DB: {len(saved_routine.get('moves', []))}")
         print(f"[PROCESS]   BPM: {bpm:.1f}")
         print(f"[PROCESS] ✅ Processing complete!\n")
@@ -1007,7 +1013,7 @@ def admin_update_routine(video_id):
 @app.route('/api/admin/song/<video_id>/timestamps', methods=['POST'])
 @require_admin
 def admin_update_timestamps(video_id):
-    """Update lyrics timestamps for a song."""
+    """Update lyrics timestamps for a song (saves to separate lyrics table, preserves choreography)."""
     data = request.get_json()
     segments = data.get('segments', [])
     offset = data.get('offset', 0)  # Optional bulk offset
@@ -1017,36 +1023,248 @@ def admin_update_timestamps(video_id):
     if not song:
         return jsonify({'error': 'Song not found'}), 404
 
-    # Parse existing lyrics
-    lyrics_data = {}
-    if song.get('lyrics_json'):
-        try:
-            lyrics_data = json.loads(song['lyrics_json'])
-        except:
-            lyrics_data = {'segments': [], 'text': '', 'language': 'en'}
-
     # Apply bulk offset if provided
     if offset != 0:
         for seg in segments:
-            seg['start'] = max(0, seg['start'] + offset)
-            seg['end'] = max(0, seg['end'] + offset)
+            seg['start'] = max(0, seg.get('start', 0) + offset)
+            if 'end' in seg:
+                seg['end'] = max(0, seg['end'] + offset)
 
-    # Update segments
-    lyrics_data['segments'] = segments
-    lyrics_data['text'] = ' '.join(s.get('text', '') for s in segments)
+    # Save to separate lyrics table (doesn't affect routines/choreography)
+    db.update_lyrics_timestamps(video_id, segments)
 
-    # Save to database
-    db.update_song(video_id, lyrics_json=json.dumps(lyrics_data))
-
-    print(f"[TIMESTAMPS] Updated {len(segments)} lyrics timestamps for {video_id}")
+    print(f"[LYRICS] Updated {len(segments)} lyrics timestamps for {video_id}")
+    print(f"[LYRICS]   Note: Choreography unchanged (lyrics saved separately)")
     if offset != 0:
-        print(f"[TIMESTAMPS]   Applied offset: {offset:+.1f}s")
+        print(f"[LYRICS]   Applied offset: {offset:+.1f}s")
 
     return jsonify({
         'success': True,
         'segments': segments,
         'count': len(segments)
     })
+
+
+# ============ LYRICS API ============
+
+@app.route('/api/songs/<video_id>/lyrics', methods=['GET'])
+def get_song_lyrics(video_id):
+    """Get lyrics for a song (public API)."""
+    lyrics = db.get_lyrics(video_id)
+    if lyrics:
+        return jsonify(lyrics)
+    return jsonify({'error': 'Lyrics not found'}), 404
+
+
+@app.route('/api/admin/song/<video_id>/lyrics', methods=['PUT'])
+@require_admin
+def admin_update_lyrics(video_id):
+    """Update lyrics for a song (admin only)."""
+    data = request.get_json()
+    segments = data.get('segments', [])
+    structure = data.get('structure')
+
+    result = db.save_lyrics(video_id, segments, structure)
+    if result:
+        print(f"[LYRICS] Full update for {video_id}: {len(segments)} segments")
+        return jsonify({'success': True, 'lyrics': result})
+    return jsonify({'error': 'Failed to save lyrics'}), 500
+
+
+@app.route('/api/songs/<video_id>/waveform', methods=['GET'])
+def get_song_waveform(video_id):
+    """
+    Get waveform data for audio visualization.
+    Returns amplitude samples for the entire song duration.
+    """
+    import numpy as np
+
+    # Check if audio file exists
+    audio_path = CACHE_DIR / f"{video_id}.mp3"
+    if not audio_path.exists():
+        # Try other extensions
+        for ext in ['m4a', 'webm', 'wav']:
+            alt_path = CACHE_DIR / f"{video_id}.{ext}"
+            if alt_path.exists():
+                audio_path = alt_path
+                break
+        else:
+            return jsonify({'error': 'Audio file not found', 'samples': []}), 404
+
+    try:
+        import librosa
+
+        # Load audio file
+        print(f"[WAVEFORM] Loading audio for {video_id}...")
+        y, sr = librosa.load(str(audio_path), sr=22050, mono=True)
+        duration = len(y) / sr
+
+        # Calculate samples per second (aim for ~20 samples per second for detailed view)
+        samples_per_second = 20
+        total_samples = int(duration * samples_per_second)
+
+        # Downsample by taking max amplitude in each window
+        window_size = len(y) // total_samples
+        samples = []
+
+        for i in range(total_samples):
+            start = i * window_size
+            end = min(start + window_size, len(y))
+            if start < len(y):
+                # Get RMS (root mean square) for this window - better than max for visualization
+                window = y[start:end]
+                rms = np.sqrt(np.mean(window ** 2))
+                samples.append(float(rms))
+
+        # Normalize to 0-1 range
+        if samples:
+            max_val = max(samples) if max(samples) > 0 else 1
+            samples = [s / max_val for s in samples]
+
+        print(f"[WAVEFORM] Generated {len(samples)} samples for {duration:.1f}s audio")
+
+        return jsonify({
+            'samples': samples,
+            'duration': duration,
+            'samples_per_second': samples_per_second
+        })
+
+    except ImportError:
+        print("[WAVEFORM] librosa not installed, returning empty waveform")
+        return jsonify({'error': 'librosa not installed', 'samples': []}), 500
+    except Exception as e:
+        print(f"[WAVEFORM] Error generating waveform: {e}")
+        return jsonify({'error': str(e), 'samples': []}), 500
+
+
+# ============ ROUTINES API (Multiple Choreographies) ============
+
+@app.route('/api/songs/<video_id>/routines', methods=['GET'])
+def get_song_routines(video_id):
+    """Get all choreography versions for a song."""
+    routines = db.get_all_routines(video_id)
+    return jsonify({'routines': routines, 'count': len(routines)})
+
+
+@app.route('/api/admin/song/<video_id>/routines', methods=['POST'])
+@require_admin
+def admin_create_routine(video_id):
+    """Create a new choreography version for a song."""
+    data = request.get_json()
+    moves = data.get('moves', [])
+    version_name = data.get('version_name', 'New Version')
+    is_default = data.get('is_default', False)
+
+    if not moves:
+        return jsonify({'error': 'Moves are required'}), 400
+
+    routine = db.save_routine(video_id, moves, version_name=version_name, is_default=is_default)
+    print(f"[ROUTINE] Created new version '{version_name}' for {video_id}: {len(moves)} moves")
+
+    return jsonify({'success': True, 'routine': routine})
+
+
+@app.route('/api/admin/routines/<int:routine_id>', methods=['PUT'])
+@require_admin
+def admin_update_routine_by_id(routine_id):
+    """Update a specific choreography routine."""
+    data = request.get_json()
+    moves = data.get('moves')
+    version_name = data.get('version_name')
+    is_default = data.get('is_default')
+
+    routine = db.update_routine(routine_id, move_sequence=moves, version_name=version_name, is_default=is_default)
+    if routine:
+        print(f"[ROUTINE] Updated routine {routine_id}")
+        return jsonify({'success': True, 'routine': routine})
+    return jsonify({'error': 'Routine not found'}), 404
+
+
+@app.route('/api/admin/routines/<int:routine_id>', methods=['DELETE'])
+@require_admin
+def admin_delete_routine(routine_id):
+    """Delete a choreography routine."""
+    if db.delete_routine(routine_id):
+        print(f"[ROUTINE] Deleted routine {routine_id}")
+        return jsonify({'success': True})
+    return jsonify({'error': 'Routine not found'}), 404
+
+
+@app.route('/api/admin/routines/<int:routine_id>/default', methods=['POST'])
+@require_admin
+def admin_set_default_routine(routine_id):
+    """Set a routine as the default for its song."""
+    if db.set_default_routine(routine_id):
+        print(f"[ROUTINE] Set routine {routine_id} as default")
+        return jsonify({'success': True})
+    return jsonify({'error': 'Routine not found'}), 404
+
+
+@app.route('/api/admin/song/<video_id>/regenerate', methods=['POST'])
+@require_admin
+def admin_regenerate_choreography(video_id):
+    """Regenerate choreography for a song (creates new version, preserves lyrics)."""
+    data = request.get_json()
+    api_key = data.get('api_key', '').strip()
+    version_name = data.get('version_name', 'Regenerated')
+    set_as_default = data.get('set_as_default', False)
+
+    if not api_key:
+        return jsonify({'error': 'Claude API key required'}), 400
+
+    # Get existing song data
+    song = db.get_song(video_id)
+    if not song:
+        return jsonify({'error': 'Song not found'}), 404
+
+    # Get lyrics from separate table
+    lyrics_data = db.get_lyrics(video_id)
+    if not lyrics_data:
+        return jsonify({'error': 'No lyrics found for this song'}), 404
+
+    try:
+        lyrics = {'segments': lyrics_data.get('segments', [])}
+        structure = {'sections': lyrics_data.get('structure', [])}
+        duration = song.get('duration', 180)
+
+        info = {
+            'title': song['title'],
+            'artist': song['artist']
+        }
+
+        print(f"\n[REGENERATE] Creating new choreography for {video_id}")
+        print(f"[REGENERATE]   Version name: {version_name}")
+        print(f"[REGENERATE]   Using existing lyrics: {len(lyrics['segments'])} segments")
+
+        # Generate new choreography
+        moves = generate_choreography(info, lyrics, structure, duration, api_key)
+
+        # Normalize moves
+        normalized_moves = []
+        for move in moves:
+            normalized_moves.append({
+                'moveId': move.get('moveId', 'step_touch'),
+                'startTime': move.get('startTime') or move.get('timestamp', 0),
+                'beats': move.get('beats', 8)
+            })
+
+        # Save as new routine (doesn't affect lyrics!)
+        routine = db.save_routine(video_id, normalized_moves, version_name=version_name, is_default=set_as_default)
+
+        print(f"[REGENERATE] ✅ New choreography created: {len(normalized_moves)} moves")
+        print(f"[REGENERATE]   Lyrics preserved: {len(lyrics['segments'])} segments unchanged")
+
+        return jsonify({
+            'success': True,
+            'routine': routine,
+            'moves_count': len(normalized_moves)
+        })
+
+    except Exception as e:
+        import traceback
+        print(f"[REGENERATE] ❌ Error: {e}")
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
 
 
 # ============ STARTUP ============

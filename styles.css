@@ -1606,7 +1606,7 @@ body {
   padding: 15px;
   background: rgba(0, 0, 0, 0.3);
   border-radius: 12px;
-  height: 100px;
+  height: 120px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -1640,11 +1640,11 @@ body {
 }
 
 .next-lyric {
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.4);
-  font-style: italic;
-  height: 1.4em;
-  line-height: 1.4em;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.35);
+  height: 1.8em;
+  line-height: 1.5em;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -1717,7 +1717,7 @@ body {
 
   .lyrics-display {
     padding: 10px;
-    height: 85px;
+    height: 100px;
   }
 
   .current-lyric {
@@ -1727,7 +1727,7 @@ body {
   }
 
   .next-lyric {
-    font-size: 0.85rem;
+    font-size: 1rem;
   }
 
   .beat-counter {

@@ -6,6 +6,31 @@ All notable changes to the Dance Card Generator project.
 
 ### Added
 
+#### Lyrics & Choreography Separation (ARCHITECTURE)
+- **NEW: Separate database tables** for lyrics and choreography
+  - `lyrics` table: ONE per song, stores segments and structure
+  - `routines` table: MANY per song, supports multiple dance versions
+- **Lyrics are PRESERVED** when regenerating choreography
+  - Carefully edited timestamps are never lost
+  - Regenerating creates a new routine version, not a replacement
+- **Multiple choreography versions per song**
+  - Each version has a name (e.g., "Original", "Easy Version", "Party Mix")
+  - One version marked as default
+  - Switch between versions, set new default, delete old versions
+- **New admin UI** with two-column layout:
+  - Lyrics section (cyan): Shows "PRESERVED" badge, Open Editor, Quick Edit
+  - Choreographies section (pink): Shows "REGENERABLE" badge, version list, + New Version
+- **New API endpoints**:
+  - `GET /api/songs/{id}/lyrics` - get lyrics only
+  - `PUT /api/admin/song/{id}/lyrics` - update lyrics
+  - `GET /api/songs/{id}/routines` - get all choreography versions
+  - `POST /api/admin/song/{id}/routines` - create new version
+  - `PUT /api/admin/routines/{id}` - update specific routine
+  - `DELETE /api/admin/routines/{id}` - delete routine
+  - `POST /api/admin/routines/{id}/default` - set as default
+  - `POST /api/admin/song/{id}/regenerate` - generate new choreography version
+- **Automatic data migration** from old schema to new
+
 #### Manual Lyrics Input (HIGH PRIORITY)
 - New lyrics source selector in admin: "Auto-detect with Whisper" vs "Paste Lyrics Manually"
 - When using manual mode, system uses Whisper for timestamp detection only
@@ -61,39 +86,56 @@ All notable changes to the Dance Card Generator project.
 - Save/Reset buttons with API persistence
 - `/api/admin/song/<video_id>/timestamps` endpoint for saving
 
-#### Full Lyrics Timeline Editor
+#### Full Lyrics Timeline Editor (Subtitle Edit Style)
 - **NEW: Professional subtitle-style editor** at `/editor?id=VIDEO_ID`
-- Embedded YouTube player with playback controls
-- **Visual timeline** showing all lyric blocks:
-  - Color-coded by section type (verse/chorus/bridge)
-  - Playhead synced with video playback
-  - Click anywhere to seek
-  - Zoom in/out controls
-- **Draggable lyric blocks**:
-  - Drag left edge to adjust start time
-  - Drag right edge to adjust end time
-  - Drag whole block to move (preserves duration)
-- **Lyrics list** with:
-  - Editable start/end times per line
-  - Editable lyric text
-  - Play button (plays that line only)
-  - Split button (divide line at midpoint)
-  - Delete button
-- **Tools panel**:
-  - Set Start/End at Playhead
-  - Split at Playhead
-  - Merge Selected lines
-  - Auto-fill Gaps
-  - Reset to Original
+- **Split-pane layout** inspired by Subtitle Edit:
+  - **Top section (60%)**: Lyrics table on left, Video player on right
+  - **Bottom section (40%)**: Waveform timeline with subtitle blocks
+- **Lyrics table** with columns:
+  - Line number (#)
+  - Start time (M:SS.s format)
+  - End time (M:SS.s format)
+  - Duration
+  - Text (truncated with tooltip for full text)
+  - Click to select, double-click to play
+- **Edit panel** below table for selected line:
+  - Editable text input
+  - Start time input (changes preserve duration)
+  - Duration input (adjusts end time)
+  - Prev/Next navigation buttons
+  - Split, Delete, Insert buttons
+- **Video panel** with:
+  - Embedded YouTube player
+  - Large current time display (2rem monospace)
+  - Seek buttons: -5s, -1s, +1s, +5s
+  - Play/Pause button
+- **Waveform timeline** with:
+  - Time ruler with tick marks at intervals
+  - Simulated waveform visualization bars
+  - Draggable subtitle blocks per lyric line
+  - Resize handles on left/right edges of blocks
+  - Red playhead synced to video position
+- **Toolbar actions**:
+  - Zoom in/out controls with percentage label
+  - "Go to Playhead" button
+  - "Play Selection" button
+  - **Set Start** - sets selected line's start to playhead position
+  - **Set End** - sets selected line's end to playhead position
+  - "+ Insert Here" - adds new line at playhead
 - **Keyboard shortcuts**:
-  - Space: Play/Pause
-  - Arrow keys: Seek (1s or 0.1s with Shift)
-  - Up/Down: Navigate lines
-  - Enter: Set start at playhead
-  - Shift+Enter: Set end at playhead
-  - S: Split at playhead
-  - Delete: Delete selected line
-- Real-time current lyric display above video
+  - `Space`: Play/Pause
+  - `← →`: Seek 1s (0.1s with Shift)
+  - `↑ ↓`: Navigate lines (prev/next)
+  - `S`: Set start to playhead
+  - `E`: Set end to playhead
+  - `I`: Insert new line at playhead
+  - `Enter`: Play selected line
+  - `Delete/Backspace`: Delete selected line
+  - `Ctrl+S / Cmd+S`: Save changes
+  - `Escape`: Exit input fields
+- **Save state tracking**:
+  - Status indicator shows "All changes saved" (green) or "Unsaved changes" (pink)
+  - Browser warns before closing with unsaved changes
 - "Full Editor" button in admin song detail modal
 
 #### BPM Detection with librosa

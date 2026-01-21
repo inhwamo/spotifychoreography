@@ -259,15 +259,18 @@ async function loadSong(videoId) {
         currentSongData = await response.json();
         currentVideoId = videoId;
 
-        // Parse lyrics segments
+        // Parse lyrics segments (now from separate lyrics table)
         if (currentSongData.lyrics) {
             currentLyricsSegments = currentSongData.lyrics.segments || null;
         } else {
             currentLyricsSegments = null;
         }
 
-        // Parse song sections for section indicator
-        if (currentSongData.routine && currentSongData.routine.structure?.sections) {
+        // Parse song sections for section indicator (now at top level or in structure)
+        if (currentSongData.structure?.sections) {
+            currentSongSections = currentSongData.structure.sections;
+        } else if (currentSongData.routine?.structure?.sections) {
+            // Fallback for old data format
             currentSongSections = currentSongData.routine.structure.sections;
         } else {
             currentSongSections = null;
@@ -277,7 +280,8 @@ async function loadSong(videoId) {
         // Build routine from stored choreography
         if (currentSongData.routine && currentSongData.routine.moves) {
             currentRoutine = buildRoutine(currentSongData.routine.moves);
-            estimatedBPM = currentSongData.routine.structure?.estimatedBPM || 120;
+            // BPM from song metadata (preferred) or fallback to old locations
+            estimatedBPM = currentSongData.song?.bpm || currentSongData.structure?.estimatedBPM || currentSongData.routine.structure?.estimatedBPM || 120;
         } else {
             throw new Error('No choreography available for this song');
         }
