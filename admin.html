@@ -482,107 +482,6 @@
             color: rgba(255,255,255,0.5);
         }
 
-        /* Timestamp Editor */
-        .timestamp-editor {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .timestamp-editor h4 {
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .bulk-offset-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 15px;
-            padding: 10px;
-            background: rgba(255,255,255,0.05);
-            border-radius: 10px;
-        }
-
-        .bulk-offset-row label {
-            font-size: 0.9rem;
-            color: rgba(255,255,255,0.7);
-        }
-
-        .bulk-offset-row input {
-            width: 80px;
-            padding: 8px;
-            text-align: center;
-        }
-
-        .timestamp-list {
-            max-height: 300px;
-            overflow-y: auto;
-            background: rgba(0,0,0,0.2);
-            border-radius: 10px;
-            padding: 10px;
-        }
-
-        .timestamp-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px;
-            border-radius: 8px;
-            transition: background 0.2s;
-        }
-
-        .timestamp-row:hover {
-            background: rgba(255,255,255,0.05);
-        }
-
-        .timestamp-row .line-num {
-            color: rgba(255,255,255,0.4);
-            font-size: 0.8rem;
-            min-width: 30px;
-        }
-
-        .timestamp-row .time-input {
-            width: 70px;
-            padding: 6px 8px;
-            text-align: center;
-            font-family: monospace;
-            font-size: 0.9rem;
-        }
-
-        .timestamp-row .lyric-text {
-            flex: 1;
-            color: rgba(255,255,255,0.8);
-            font-size: 0.9rem;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .timestamp-row .play-btn {
-            padding: 4px 10px;
-            background: rgba(0,212,255,0.2);
-            border: 1px solid var(--secondary);
-            border-radius: 5px;
-            color: var(--secondary);
-            cursor: pointer;
-            font-size: 0.85rem;
-            transition: all 0.2s;
-        }
-
-        .timestamp-row .play-btn:hover {
-            background: var(--secondary);
-            color: var(--dark);
-        }
-
-        .timestamp-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
         /* Responsive */
         @media (max-width: 768px) {
             .tabs { flex-wrap: wrap; }
@@ -766,18 +665,11 @@ Say things you don't understand"></textarea>
                         <!-- LYRICS Section (preserved when regenerating) -->
                         <div style="background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);border-radius:12px;padding:15px">
                             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-                                <h4 style="color:var(--secondary);margin:0">Lyrics</h4>
-                                <span class="badge" style="background:var(--secondary);color:var(--dark)">PRESERVED</span>
-                            </div>
-                            <p style="font-size:0.85rem;color:rgba(255,255,255,0.6);margin-bottom:10px">
-                                Your carefully edited timestamps are safe here. Regenerating choreography won't affect them.
-                            </p>
-                            <div style="margin-bottom:10px">
-                                <span id="detail-lyrics-count">0 lines</span>
-                            </div>
-                            <div style="display:flex;gap:8px;flex-wrap:wrap">
+                                <h4 style="color:var(--secondary);margin:0">Lyrics <span id="detail-lyrics-count" style="font-weight:normal;font-size:0.85rem;color:rgba(255,255,255,0.5)">(0 lines)</span></h4>
                                 <a id="detail-edit-link" href="#" target="_blank" class="btn btn-secondary btn-small" style="text-decoration:none">Open Editor</a>
-                                <button class="btn btn-secondary btn-small" onclick="toggleQuickEditor()">Quick Edit</button>
+                            </div>
+                            <div id="lyrics-text" style="max-height:200px;overflow-y:auto;font-size:0.85rem;line-height:1.6;color:rgba(255,255,255,0.8);background:rgba(0,0,0,0.2);border-radius:8px;padding:10px">
+                                <!-- Populated by JavaScript -->
                             </div>
                         </div>
 
@@ -807,31 +699,6 @@ Say things you don't understand"></textarea>
                             <span style="color:rgba(255,255,255,0.5);font-size:0.85rem"><span id="detail-move-count">0</span> moves (hover for details)</span>
                         </div>
                         <div class="moves-preview" id="detail-moves" style="max-height:150px;overflow-y:auto"></div>
-                    </div>
-
-                    <!-- Quick Timestamp Editor (collapsible) -->
-                    <div class="timestamp-editor" id="timestamp-editor" style="display:none">
-                        <h4>
-                            Quick Timestamp Edit
-                            <span style="color:rgba(255,255,255,0.5);font-size:0.85rem;font-weight:normal">Adjust when each lyric appears</span>
-                        </h4>
-
-                        <div class="bulk-offset-row">
-                            <label>Bulk offset:</label>
-                            <input type="number" id="bulk-offset" value="0" step="0.1" placeholder="0">
-                            <span style="color:rgba(255,255,255,0.5)">seconds</span>
-                            <button class="btn btn-secondary btn-small" onclick="applyBulkOffset()">Apply to All</button>
-                        </div>
-
-                        <div class="timestamp-list" id="timestamp-list">
-                            <!-- Populated by JavaScript -->
-                        </div>
-
-                        <div class="timestamp-actions">
-                            <button class="btn btn-success" onclick="saveTimestamps()">Save Lyrics Only</button>
-                            <button class="btn btn-secondary" onclick="resetTimestamps()">Reset</button>
-                            <span style="font-size:0.8rem;color:rgba(255,255,255,0.5);margin-left:10px">Choreography unchanged</span>
-                        </div>
                     </div>
 
                     <!-- Footer Actions -->
@@ -918,8 +785,7 @@ Say things you don't understand"></textarea>
         // State
         let adminPassword = '';
         let currentSong = null;
-        let currentSongLyrics = [];  // Store lyrics for timestamp editor
-        let originalTimestamps = []; // Store original for reset
+        let currentSongLyrics = [];  // Store lyrics for viewer
         let currentViewVideoId = null;
 
         // Auth
@@ -1360,10 +1226,9 @@ Say things you don't understand"></textarea>
                 const lyrics = data.lyrics || { segments: [] };
                 const allRoutines = data.all_routines || [];
 
-                // Store for timestamp editor
+                // Store for lyrics viewer
                 currentViewVideoId = videoId;
                 currentSongLyrics = lyrics.segments || [];
-                originalTimestamps = currentSongLyrics.map(s => s.start);
 
                 // Populate modal - Song info
                 document.getElementById('detail-thumbnail').src = song.thumbnail_url || 'https://via.placeholder.com/200x112?text=No+Thumbnail';
@@ -1408,12 +1273,11 @@ Say things you don't understand"></textarea>
                 ).join('');
                 document.getElementById('detail-moves').innerHTML = movesHtml || '<em>No moves</em>';
 
-                // Populate timestamp editor (but keep it hidden initially)
-                populateTimestampEditor(currentSongLyrics);
-                document.getElementById('timestamp-editor').style.display = 'none';
-
-                // Reset bulk offset
-                document.getElementById('bulk-offset').value = '0';
+                // Populate lyrics display
+                const lyricsHtml = currentSongLyrics.map(seg =>
+                    `<div style="padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.05)">${seg.text}</div>`
+                ).join('');
+                document.getElementById('lyrics-text').innerHTML = lyricsHtml || '<em style="color:rgba(255,255,255,0.4)">No lyrics</em>';
 
                 // Play link - use index.html with query param
                 document.getElementById('detail-play-link').href = `/?id=${videoId}`;
@@ -1436,12 +1300,6 @@ Say things you don't understand"></textarea>
             } catch (error) {
                 alert('Error loading song: ' + error.message);
             }
-        }
-
-        // Toggle quick timestamp editor visibility
-        function toggleQuickEditor() {
-            const editor = document.getElementById('timestamp-editor');
-            editor.style.display = editor.style.display === 'none' ? 'block' : 'none';
         }
 
         // Open regenerate choreography modal
@@ -1533,134 +1391,7 @@ Say things you don't understand"></textarea>
             }
         }
 
-        // Populate timestamp editor with lyrics
-        function populateTimestampEditor(segments) {
-            const container = document.getElementById('timestamp-list');
-
-            if (!segments || segments.length === 0) {
-                container.innerHTML = '<p style="color:rgba(255,255,255,0.5);padding:15px;text-align:center">No lyrics available for this song</p>';
-                return;
-            }
-
-            const html = segments.map((seg, i) => `
-                <div class="timestamp-row" data-index="${i}">
-                    <span class="line-num">${i + 1}</span>
-                    <input type="text" class="time-input" id="ts-${i}" value="${formatTimeMs(seg.start)}" onchange="updateTimestamp(${i})">
-                    <span class="lyric-text" title="${escapeHtml(seg.text)}">${escapeHtml(seg.text)}</span>
-                    <button class="play-btn" onclick="playFromTimestamp(${i})">&#9654; Play</button>
-                </div>
-            `).join('');
-
-            container.innerHTML = html;
-        }
-
-        // Format time with milliseconds (M:SS.s)
-        function formatTimeMs(seconds) {
-            if (seconds === undefined || seconds === null) return '0:00.0';
-            const mins = Math.floor(seconds / 60);
-            const secs = (seconds % 60).toFixed(1);
-            return `${mins}:${secs.padStart(4, '0')}`;
-        }
-
-        // Parse time from M:SS.s format
-        function parseTimeMs(timeStr) {
-            const parts = timeStr.split(':');
-            if (parts.length === 2) {
-                const mins = parseInt(parts[0]) || 0;
-                const secs = parseFloat(parts[1]) || 0;
-                return mins * 60 + secs;
-            }
-            return parseFloat(timeStr) || 0;
-        }
-
-        // Escape HTML special chars
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // Update timestamp from input
-        function updateTimestamp(index) {
-            const input = document.getElementById(`ts-${index}`);
-            const newTime = parseTimeMs(input.value);
-            if (currentSongLyrics[index]) {
-                currentSongLyrics[index].start = newTime;
-            }
-        }
-
-        // Play 4 seconds of audio from a specific timestamp
-        function playFromTimestamp(index) {
-            const time = currentSongLyrics[index]?.start || 0;
-            // Open player in new tab at this timestamp
-            window.open(`/?id=${currentViewVideoId}&t=${Math.floor(time)}`, '_blank');
-        }
-
-        // Apply bulk offset to all timestamps
-        function applyBulkOffset() {
-            const offset = parseFloat(document.getElementById('bulk-offset').value) || 0;
-
-            currentSongLyrics.forEach((seg, i) => {
-                seg.start = Math.max(0, seg.start + offset);
-                const input = document.getElementById(`ts-${i}`);
-                if (input) {
-                    input.value = formatTimeMs(seg.start);
-                }
-            });
-
-            // Reset offset field
-            document.getElementById('bulk-offset').value = '0';
-        }
-
-        // Reset timestamps to original
-        function resetTimestamps() {
-            currentSongLyrics.forEach((seg, i) => {
-                seg.start = originalTimestamps[i] || 0;
-                const input = document.getElementById(`ts-${i}`);
-                if (input) {
-                    input.value = formatTimeMs(seg.start);
-                }
-            });
-            document.getElementById('bulk-offset').value = '0';
-        }
-
-        // Save timestamps to server
-        async function saveTimestamps() {
-            if (!currentViewVideoId) {
-                alert('No song selected');
-                return;
-            }
-
-            // Build segments array from edited lyrics
-            const segments = currentSongLyrics.map(seg => ({
-                start: seg.start,
-                end: seg.end,
-                text: seg.text
-            }));
-
-            try {
-                const response = await fetch(`/api/admin/song/${currentViewVideoId}/timestamps`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Admin-Password': adminPassword
-                    },
-                    body: JSON.stringify({ segments })
-                });
-
-                const data = await response.json();
-
-                if (data.error) {
-                    alert('Error saving: ' + data.error);
-                } else {
-                    alert('Timestamps saved successfully!');
-                    // Update original timestamps
-                    originalTimestamps = currentSongLyrics.map(s => s.start);
-                }
-            } catch (error) {
-                alert('Error saving timestamps: ' + error.message);
-            }
-        }
+        // (Timestamp editor functions removed - use full editor instead)
 
         // Close song detail modal
         function closeSongModal() {
